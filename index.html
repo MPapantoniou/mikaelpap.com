@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mikael Papantoniou</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav id="navbar">
+        <div class="nav-inner">
+            <a href="#" class="nav-logo">MP</a>
+            <div class="nav-links">
+                <a href="#" class="nav-link active" data-tab="about">About Me</a>
+                <a href="#" class="nav-link" data-tab="roisin">Róisín</a>
+                <a href="#" class="nav-link" data-tab="hobbies">Hobbies</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ABOUT ME TAB -->
+    <section id="tab-about" class="tab-content active">
+        <div class="about-container">
+            <div class="about-photo">
+                <img src="assets/images/mikael.jpg" alt="Mikael Papantoniou" id="profile-photo">
+                <div class="photo-placeholder" id="photo-placeholder-mikael">Photo coming soon</div>
+            </div>
+            <div class="about-text">
+                <h1>Mikael Papantoniou</h1>
+                <p class="subtitle">Welcome to my corner of the internet.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- RÓISÍN TAB -->
+    <section id="tab-roisin" class="tab-content">
+        <div class="roisin-container">
+            <!-- Phase 1: Clean intro with couple photo -->
+            <div class="roisin-intro" id="roisin-intro">
+                <div class="couple-photo">
+                    <img src="assets/images/couple.jpg" alt="Mikael and Róisín" id="couple-photo">
+                    <div class="photo-placeholder" id="photo-placeholder-couple">Photo coming soon</div>
+                </div>
+                <h2>Róisín & Me</h2>
+                <p class="roisin-subtitle">Click below to see something special.</p>
+                <button id="start-animation" class="start-btn">Play</button>
+            </div>
+
+            <!-- Phase 2: Animation canvas -->
+            <div class="animation-wrapper" id="animation-wrapper">
+                <canvas id="moon-canvas"></canvas>
+                <div class="reveal-text" id="reveal-text">
+                    I love you to the moon and back
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- HOBBIES TAB -->
+    <section id="tab-hobbies" class="tab-content">
+        <div class="hobbies-container">
+            <h2>Hobbies</h2>
+            <p class="hobbies-subtitle">More coming soon.</p>
+        </div>
+    </section>
+
+    <script src="js/main.js"></script>
+    <script src="js/animation.js"></script>
+</body>
+</html>
