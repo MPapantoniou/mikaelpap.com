@@ -92,60 +92,150 @@ body {
     justify-content: center;
 }
 
-/* === ABOUT ME === */
-.about-container {
-    text-align: center;
-    padding: 4rem 2rem;
+/* === ABOUT ME / DUALITY SPLIT === */
+
+/* override the default tab centering so the split fills edge-to-edge */
+#tab-about.active {
+    display: block;
+    align-items: unset;
+    justify-content: unset;
 }
 
-.about-photo {
-    margin-bottom: 2rem;
-}
-
-.about-photo img {
-    width: 200px;
-    height: 200px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 3px solid var(--border);
-}
-
-.about-photo img[src=""],
-.about-photo img:not([src]),
-.about-photo img[src="assets/images/mikael.jpg"] {
-    display: none;
-}
-
-.about-photo img[src="assets/images/mikael.jpg"] ~ .photo-placeholder,
-.about-photo img:not([src]) ~ .photo-placeholder {
+.duality-container {
+    width: 100%;
+    height: calc(100vh - 64px);
     display: flex;
+    position: relative;
 }
 
-.photo-placeholder {
-    width: 200px;
-    height: 200px;
-    border-radius: 50%;
-    background: var(--border);
+.duality-half {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-light);
-    font-size: 0.85rem;
-    margin: 0 auto;
-    border: 3px solid var(--border);
+    overflow: hidden;
 }
 
-.about-text h1 {
-    font-size: 2.5rem;
-    font-weight: 600;
-    letter-spacing: -1px;
-    margin-bottom: 0.5rem;
+.duality-dark {
+    background: #1a1a1a;
+    color: #e0dbd2;
 }
 
-.subtitle {
-    color: var(--text-light);
+.duality-light {
+    background: #f5f0e8;
+    color: #1a1a1a;
+}
+
+.duality-items {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    align-items: center;
+}
+
+.duality-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.45rem;
+    transform: rotate(var(--r, 0deg));
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    opacity: 0.85;
+}
+
+.duality-item:hover {
+    transform: rotate(0deg) scale(1.08);
+    opacity: 1;
+}
+
+.sketch-icon {
+    width: 52px;
+    height: 52px;
+}
+
+.duality-item span {
+    font-family: 'Caveat', cursive;
     font-size: 1.1rem;
-    font-weight: 300;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* Divider: thin line + name running vertically like a book spine */
+.duality-divider {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.divider-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1px;
+    background: linear-gradient(to bottom, transparent 0%, #888 12%, #888 88%, transparent 100%);
+    opacity: 0.3;
+}
+
+/* photo circle centred on the split line */
+.divider-photo {
+    position: relative;
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    margin-bottom: 1rem;
+    flex-shrink: 0;
+}
+
+.divider-photo img {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #888;
+    display: block;
+}
+
+/* img sits on top of placeholder; onerror hides it if file is missing */
+
+.photo-placeholder {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: #2a2a2a;
+    border: 3px solid #888;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Caveat', cursive;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #e0dbd2;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+/* name reads top-to-bottom along the divider */
+.divider-name {
+    font-family: 'Caveat', cursive;
+    font-size: 0.78rem;
+    letter-spacing: 3.5px;
+    text-transform: uppercase;
+    color: #888;
+    opacity: 0.5;
+    white-space: nowrap;
+    writing-mode: vertical-lr;
+    text-orientation: mixed;
 }
 
 /* === RÓISÍN TAB === */
@@ -340,10 +430,6 @@ body.roisin-burst {
         font-size: 0.8rem;
     }
 
-    .about-text h1 {
-        font-size: 1.8rem;
-    }
-
     .reveal-text {
         font-size: 1.8rem;
         padding: 0 1rem;
@@ -353,5 +439,52 @@ body.roisin-burst {
     .couple-photo .photo-placeholder {
         width: 220px;
         height: 220px;
+    }
+
+    /* duality: stack vertically on mobile */
+    .duality-container {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .duality-half {
+        min-height: 50vh;
+        padding: 3rem 1.5rem;
+    }
+
+    .duality-items {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1.5rem;
+    }
+
+    /* divider becomes a horizontal line */
+    .duality-divider {
+        position: relative;
+        left: auto;
+        top: auto;
+        bottom: auto;
+        transform: none;
+        width: 100%;
+        height: 48px;
+        flex-direction: row;
+    }
+
+    .divider-line {
+        top: 50%;
+        bottom: auto;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: 1px;
+        transform: translateY(-50%);
+        background: linear-gradient(to right, transparent 0%, #888 12%, #888 88%, transparent 100%);
+    }
+
+    .divider-name {
+        writing-mode: horizontal-tb;
+        letter-spacing: 2.5px;
+        font-size: 0.75rem;
     }
 }
