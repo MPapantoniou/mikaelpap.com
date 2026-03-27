@@ -160,6 +160,24 @@ body {
     letter-spacing: 0.5px;
 }
 
+/* === EDGE SCATTER === */
+.edge-scatter {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.es {
+    position: absolute;
+    font-family: 'Caveat', cursive;
+    color: currentColor;
+    transform: rotate(var(--er, 0deg));
+    line-height: 1;
+    user-select: none;
+}
+
+/* === DIVIDER === */
 /* Divider: thin line + name running vertically like a book spine */
 .duality-divider {
     position: absolute;
@@ -352,20 +370,134 @@ body {
 /* === HOBBIES TAB === */
 .hobbies-container {
     text-align: center;
-    padding: 4rem 2rem;
+    padding: 4rem 2rem 5rem;
+    max-width: 780px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3rem;
 }
 
-.hobbies-container h2 {
-    font-size: 2rem;
-    font-weight: 600;
-    letter-spacing: -0.5px;
-    margin-bottom: 0.5rem;
+/* seb greeting */
+.seb-greeting {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
 }
 
-.hobbies-subtitle {
+.hello-seb {
+    font-family: 'Caveat', cursive;
+    font-size: 3.2rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text);
+    transform: rotate(-1.5deg);
+    display: inline-block;
+}
+
+.slapping-cheeks {
+    font-family: 'Caveat', cursive;
+    font-size: 1.5rem;
+    font-weight: 400;
     color: var(--text-light);
-    font-size: 1rem;
-    font-weight: 300;
+    letter-spacing: 1px;
+    transform: rotate(1deg);
+    display: inline-block;
+}
+
+/* monkey illustration */
+.monkey-wrap {
+    display: flex;
+    justify-content: center;
+}
+
+.monkey-svg {
+    width: 200px;
+    height: 182px;
+    animation: monkey-bounce 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes monkey-bounce {
+    from { transform: translateY(0) rotate(-1deg); }
+    to   { transform: translateY(-6px) rotate(1deg); }
+}
+
+/* hands pat inward then relax */
+.monkey-left-hand {
+    animation: left-pat 0.7s ease-in-out infinite alternate;
+    transform-origin: 58px 106px;
+}
+.monkey-right-hand {
+    animation: right-pat 0.7s ease-in-out infinite alternate;
+    transform-origin: 162px 106px;
+}
+
+@keyframes left-pat {
+    from { transform: translateX(0); }
+    to   { transform: translateX(6px); }
+}
+@keyframes right-pat {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-6px); }
+}
+
+/* badminton */
+.badminton-scene {
+    width: 100%;
+    max-width: 700px;
+}
+
+.badminton-svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+/* racket arm swings — shoulder is pivot */
+.seb-arm {
+    animation: seb-swing 3.2s ease-in-out infinite;
+}
+.mik-arm {
+    animation: mik-swing 3.2s ease-in-out infinite;
+}
+
+/* seb hits at t=0 (and t=3.2s), mik at t=1.6s */
+@keyframes seb-swing {
+    0%   { transform: rotate(-20deg); }
+    6%   { transform: rotate(35deg);  }   /* impact */
+    14%  { transform: rotate(-10deg); }   /* follow-through */
+    45%, 95% { transform: rotate(-20deg); }
+    100% { transform: rotate(-20deg); }
+}
+
+@keyframes mik-swing {
+    0%, 44%  { transform: rotate(20deg);  }  /* resting */
+    50%      { transform: rotate(-35deg); }   /* impact */
+    58%      { transform: rotate(10deg);  }   /* follow-through */
+    90%      { transform: rotate(20deg);  }
+    100%     { transform: rotate(20deg);  }
+}
+
+/* shuttle: nested groups let X and Y animate independently */
+.shuttle-x {
+    /* starts near seb's racket */
+    animation: sx 1.6s linear infinite alternate;
+}
+.shuttle-y {
+    animation: sy 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes sx {
+    from { transform: translateX(168px); }  /* near seb */
+    to   { transform: translateX(532px); }  /* near mik */
+}
+
+@keyframes sy {
+    from { transform: translateY(186px); }  /* racket height */
+    50%  { transform: translateY(80px);  }  /* arc peak */
+    to   { transform: translateY(186px); }  /* racket height */
 }
 
 /* === ROISIN COLOR TRANSITION STATES === */
