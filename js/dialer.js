@@ -3,7 +3,7 @@
 
 (function () {
     // PASTE the base64 blob from encrypt.html here (between the quotes):
-    const ENCRYPTED_BLOB = "nmmt3AcZ0Vd6iYqFq7FdeMTpP6HqYUusA+i8jvzFN0tHfffs8p1xrFpqcqjXUObxOsoXo44x+6OQWp8x6LDSkdKItvE7wSc5mH3FADucZxNn7ubU51qcpA3CG2XHBIvN1LISF+b4Olq7TAx+uyStYKAD22YimGA6B1oAUlyd6P9VAjyy+a69HnQpLjHdqWRvZRzqAelf3T+3IHYD808Nh091g+c3fl1638idZ+s=";
+    const ENCRYPTED_BLOB ="Elh80wqqzWtugsiHYOivcBXmdMsjcpqS/cltPAoaE8dhnSdSBfTPCQ9qKDcONSBXBNTwjgz2lxQ+D7TUHluTi7SjPkX7HdfhDsaZMaecwHbPYywXcIUe2CAzapY3Avol5JyRqkwd8J31YpPJyGrp2UtmOIwDXFy+cBXQbD9/UT3+NBJWUuhFEMYUghyNQadzBH362Cdforw1J6adboVpBsyzx3USl1ohUpuBRuqfV6Z+h6CSg12/+NgdznhOwzVpZmKNi1Fx7sZyX+6vp2eu6k1OMeJw8rUVB1bQWNouvmXIh5RxxM/SeCC1oEVGJKc4Yg1ZvmlIqr6mqTu1Cku8tlqehQMpa3m3OdMVI26GFW7EhIUdA/whkQQdPJyaRiMgaJ2YX5HvWOIc3f61g0DPG+Y0ixj8Zqb+c/j/H+7TasAFM488bgcgyeTc99lVqvregZUkqMHgpnLMLSfEzFgWqUY2dFgq";
 
     const TAP_THRESHOLD = 5;
     const TAP_WINDOW_MS = 3000;
@@ -108,24 +108,51 @@
         let entries;
         try { entries = JSON.parse(json); } catch { showHoneypotSuccess(); return; }
 
+        // Backwards-compat: old schema was {label, number} (treated as phone)
+        // New schema is {type: 'phone'|'code', label, value}
+        entries = entries.map(e => ({
+            type:  e.type || 'phone',
+            label: e.label,
+            value: e.value !== undefined ? e.value : e.number
+        }));
+
+        const phones = entries.filter(e => e.type === 'phone');
+        const codes  = entries.filter(e => e.type === 'code');
+
         const container = document.createElement('div');
         container.className = 'dialer-reveal';
 
-        entries.forEach(e => {
-            const row = document.createElement('div');
-            row.className = 'dialer-reveal-item';
-            row.innerHTML = `<span class="rl">${escape(e.label)}</span><span class="rn">${escape(e.number)}</span>`;
-            row.addEventListener('click', async () => {
-                try { await navigator.clipboard.writeText(e.number); } catch {}
-                row.classList.add('copied');
-                setTimeout(() => row.classList.remove('copied'), 1400);
-            });
-            container.appendChild(row);
-        });
+        if (phones.length) {
+            container.appendChild(makeSectionHeader('Phone Numbers'));
+            phones.forEach(e => container.appendChild(makeRow(e)));
+        }
+        if (codes.length) {
+            container.appendChild(makeSectionHeader('Backup Codes'));
+            codes.forEach(e => container.appendChild(makeRow(e)));
+        }
 
         feedback.innerHTML = '';
         feedback.appendChild(container);
         feedback.className = 'dialer-feedback';
+    }
+
+    function makeSectionHeader(text) {
+        const h = document.createElement('div');
+        h.className = 'dialer-reveal-section';
+        h.textContent = text;
+        return h;
+    }
+
+    function makeRow(e) {
+        const row = document.createElement('div');
+        row.className = 'dialer-reveal-item';
+        row.innerHTML = `<span class="rl">${escape(e.label)}</span><span class="rn">${escape(e.value)}</span>`;
+        row.addEventListener('click', async () => {
+            try { await navigator.clipboard.writeText(e.value); } catch {}
+            row.classList.add('copied');
+            setTimeout(() => row.classList.remove('copied'), 1400);
+        });
+        return row;
     }
 
     function escape(s) {

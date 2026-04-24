@@ -794,6 +794,19 @@ body.roisin-burst {
     margin-top: 0.5rem;
 }
 
+.dialer-reveal-section {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-top: 0.4rem;
+    padding-left: 0.2rem;
+}
+
+.dialer-reveal-section:first-child {
+    margin-top: 0;
+}
+
 .dialer-reveal-item {
     background: #2c2c2e;
     border-radius: 10px;
