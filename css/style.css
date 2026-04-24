@@ -620,3 +620,205 @@ body.roisin-burst {
         font-size: 0.75rem;
     }
 }
+
+/* === DIALER (hidden, revealed by 5-tap easter egg on MP logo) === */
+.dialer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.88);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.dialer-overlay.active {
+    display: flex;
+    animation: dialer-fade 0.25s ease-out;
+}
+
+@keyframes dialer-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.dialer-frame {
+    width: min(340px, 92vw);
+    background: #1c1c1e;
+    border-radius: 28px;
+    padding: 1.2rem 1.5rem 1.6rem;
+    color: white;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+
+.dialer-close {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.9rem;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.5);
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+}
+.dialer-close:hover { color: white; }
+
+.dialer-display {
+    min-height: 52px;
+    font-size: 2rem;
+    font-weight: 300;
+    letter-spacing: 2px;
+    text-align: center;
+    padding: 0.8rem 0;
+    margin-bottom: 0.6rem;
+    color: white;
+    word-break: break-all;
+}
+
+.dialer-keys {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+}
+
+.dkey {
+    background: #2c2c2e;
+    border: none;
+    border-radius: 50%;
+    width: 72px;
+    height: 72px;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.1s ease, transform 0.08s ease;
+    margin: 0 auto;
+}
+
+.dkey:active, .dkey:hover {
+    background: #3a3a3c;
+    transform: scale(0.96);
+}
+
+.dkey .dd {
+    font-size: 1.7rem;
+    font-weight: 400;
+    line-height: 1;
+}
+
+.dkey .dl {
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    color: rgba(255,255,255,0.55);
+    margin-top: 0.1rem;
+    height: 0.7rem;
+}
+
+.dialer-actions {
+    display: grid;
+    grid-template-columns: 1fr 72px 1fr;
+    gap: 0.65rem;
+    align-items: center;
+    justify-items: center;
+}
+
+.dialer-call {
+    background: #34c759;
+    border: none;
+    border-radius: 50%;
+    width: 72px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.1s ease, transform 0.08s ease;
+}
+.dialer-call:hover { background: #2dad4e; transform: scale(0.96); }
+
+.dialer-del {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.6);
+    font-size: 1.4rem;
+    cursor: pointer;
+    padding: 0.5rem;
+}
+.dialer-del:hover { color: white; }
+
+/* feedback states */
+.dialer-feedback {
+    min-height: 40px;
+    margin-top: 0.8rem;
+    text-align: center;
+    font-size: 0.95rem;
+}
+
+.dialer-frame.shake {
+    animation: dialer-shake 0.45s ease-in-out;
+}
+@keyframes dialer-shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-10px); }
+    40%, 80% { transform: translateX(10px); }
+}
+
+.dialer-frame.success {
+    animation: dialer-pulse 0.5s ease-out;
+}
+@keyframes dialer-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.6); }
+    100% { box-shadow: 0 0 0 40px rgba(52, 199, 89, 0); }
+}
+
+.dialer-feedback.win {
+    color: #34c759;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.dialer-reveal {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+}
+
+.dialer-reveal-item {
+    background: #2c2c2e;
+    border-radius: 10px;
+    padding: 0.7rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.dialer-reveal-item:hover { background: #3a3a3c; }
+
+.dialer-reveal-item .rl {
+    color: rgba(255,255,255,0.6);
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+}
+
+.dialer-reveal-item .rn {
+    font-size: 1.05rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+.dialer-reveal-item.copied .rn::after {
+    content: ' ✓';
+    color: #34c759;
+}
