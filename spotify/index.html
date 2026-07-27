@@ -152,8 +152,14 @@ body{
 .rank{display:flex;flex-direction:column;gap:13px}
 .row{display:grid;grid-template-columns:16px 1fr auto;gap:10px;align-items:baseline}
 .row-n{font-size:.72rem;color:var(--ink-3);font-variant-numeric:tabular-nums}
-.row-name{font-size:.87rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row-detail{font-size:.72rem;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* display:block is load-bearing, not cosmetic: text-overflow/overflow are ignored on
+   inline elements, so as <span>s these refused to ellipsis and long classical artist
+   credits ("Wolfgang Amadeus Mozart, Renaud Capucon, Orchestre...") pushed the page
+   sideways. Blockifying them lets the clip actually happen. */
+.row-name{display:block;font-size:.87rem;font-weight:500;
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-detail{display:block;font-size:.72rem;color:var(--ink-3);
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row-count{font-size:.8rem;color:var(--ink-2);font-variant-numeric:tabular-nums}
 /* Magnitude bar: 6px thin, 4px rounded data-end, square at the baseline. */
 .mag{grid-column:2 / span 2;height:6px;background:var(--card-2);border-radius:3px;overflow:hidden;margin-top:5px}
@@ -426,8 +432,8 @@ async function loadRecent(){
         <div class="play">
           <img class="play-art" loading="lazy" alt="" src="${esc(p.art || BLANK)}">
           <div class="play-body">
-            <div class="play-track">${esc(p.track)}</div>
-            <div class="play-artist">${esc(p.artist)}</div>
+            <div class="play-track" title="${esc(p.track)}">${esc(p.track)}</div>
+            <div class="play-artist" title="${esc(p.artist)}">${esc(p.artist)}</div>
           </div>
           <div class="play-when">${esc(p.date)}<br>${esc(p.time)}</div>
         </div>`).join("");
@@ -456,7 +462,7 @@ function renderRank(elId, rows, colour, emptyMsg){
       <div class="row">
         <span class="row-n">${i+1}</span>
         <span>
-          <span class="row-name">${esc(r.name)}</span><br>
+          <span class="row-name" title="${esc(r.name)}">${esc(r.name)}</span>
           <span class="row-detail">${esc(r.detail || "")}</span>
         </span>
         <span class="row-count">${r.count}</span>
