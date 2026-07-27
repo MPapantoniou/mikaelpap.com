@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Listening — Mikael Papantoniou</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎧</text></svg>">
+<style>
+/* ---------------------------------------------------------------------------
+   Palette validated with the dataviz palette validator (dark mode):
+     lightness band PASS · chroma floor PASS · CVD separation ΔE 20.5 (deutan)
+     normal-vision ΔE 23.0 · contrast vs surface >= 3:1 all slots
+   Three categorical hues carry the identity of the three ranked panels.
+   Text never wears a data colour - the coloured bar beside it carries identity.
+--------------------------------------------------------------------------- */
+:root{
+  --bg:#0d0d0e; --card:#17171a; --card-2:#1f1f23; --line:#27272a;
+  --ink:#f4f4f5; --ink-2:#a1a1aa; --ink-3:#71717a;
+  --songs:#16A34A; --artists:#3B82C4; --genres:#C9762E;
+  --r:16px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============================== LOCK SCREEN ============================== */
+#lock{
+  position:fixed; inset:0; z-index:1000; display:flex;
+  align-items:center; justify-content:center;
+  background:radial-gradient(circle at 50% 30%,#1a1a1f 0%,#0a0a0b 70%);
+}
+#lock.hidden{display:none}
+.frame{
+  width:min(340px,92vw); background:#1c1c1e; border-radius:28px;
+  padding:1.4rem 1.5rem 1.6rem; box-shadow:0 20px 60px rgba(0,0,0,.6);
+  text-align:center;
+}
+.lock-icon{font-size:2rem;margin-bottom:.2rem}
+.lock-title{font-size:.95rem;color:var(--ink-2);font-weight:500;letter-spacing:.02em}
+.display{
+  min-height:52px; font-size:2rem; font-weight:300; letter-spacing:6px;
+  padding:.9rem 0 .5rem; word-break:break-all;
+}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:.65rem;margin-bottom:1rem}
+.dkey{
+  background:#2c2c2e;border:none;border-radius:50%;width:72px;height:72px;
+  color:#fff;cursor:pointer;margin:0 auto;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.7rem;font-weight:400;
+  transition:background .1s ease,transform .08s ease;
+}
+.dkey:active,.dkey:hover{background:#3a3a3c;transform:scale(.96)}
+.actions{display:flex;align-items:center;justify-content:center;gap:1.5rem}
+.call{
+  background:var(--songs);border:none;border-radius:50%;width:72px;height:72px;
+  color:#fff;font-size:1.6rem;cursor:pointer;
+  transition:background .15s ease,transform .08s ease;
+}
+.call:hover{filter:brightness(1.12);transform:scale(.96)}
+.call:disabled{opacity:.5;cursor:default}
+.del{
+  background:none;border:none;color:rgba(255,255,255,.55);
+  font-size:1rem;cursor:pointer;padding:.5rem .8rem;
+}
+.del:hover{color:#fff}
+.frame.shake{animation:shake .45s ease-in-out}
+@keyframes shake{
+  0%,100%{transform:translateX(0)} 20%{transform:translateX(-9px)}
+  40%{transform:translateX(9px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)}
+}
+.lock-msg{min-height:1.2rem;font-size:.8rem;color:var(--ink-3);margin-top:.7rem}
+
+/* ================================ LAYOUT ================================= */
+#dash{display:none;padding:20px;max-width:1500px;margin:0 auto}
+#dash.shown{display:block}
+.topbar{
+  display:flex;align-items:baseline;justify-content:space-between;
+  gap:1rem;margin-bottom:18px;flex-wrap:wrap;
+}
+.topbar h1{font-size:1.15rem;font-weight:600;letter-spacing:-.01em}
+.topbar .sub{font-size:.78rem;color:var(--ink-3)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 370px;grid-template-rows:auto 1fr;gap:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.card h2{
+  font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.09em;
+  color:var(--ink-3);margin-bottom:14px;display:flex;align-items:center;gap:8px;
+}
+.swatch{width:9px;height:9px;border-radius:2px;flex:none}
+
+/* ============================= NOW PLAYING =============================== */
+.now{grid-column:1;grid-row:1;display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.art{
+  width:132px;height:132px;border-radius:12px;flex:none;object-fit:cover;
+  background:var(--card-2);box-shadow:0 8px 30px rgba(0,0,0,.5);
+}
+.now-body{flex:1;min-width:210px}
+.now-status{
+  display:flex;align-items:center;gap:9px;
+  font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--ink-3);margin-bottom:9px;
+}
+/* Hero figure: the one number/title the view leads with. */
+.now-track{font-size:1.65rem;font-weight:600;letter-spacing:-.02em;line-height:1.15}
+.now-artist{font-size:.98rem;color:var(--ink-2);margin-top:5px}
+.now-album{font-size:.8rem;color:var(--ink-3);margin-top:3px}
+
+/* Equaliser: decorative motion, not a data mark. Hidden when paused. */
+.eq{display:inline-flex;align-items:flex-end;gap:2px;height:12px}
+.eq i{width:3px;background:var(--songs);border-radius:1px;animation:eq .9s ease-in-out infinite}
+.eq i:nth-child(2){animation-delay:.15s} .eq i:nth-child(3){animation-delay:.3s}
+.eq i:nth-child(4){animation-delay:.45s}
+@keyframes eq{0%,100%{height:3px}50%{height:12px}}
+@media (prefers-reduced-motion:reduce){.eq i{animation:none;height:7px}}
+
+.bar-track{height:5px;background:var(--card-2);border-radius:3px;margin-top:16px;overflow:hidden}
+.bar-fill{height:100%;background:var(--songs);border-radius:0 4px 4px 0;width:0;transition:width 1s linear}
+.times{display:flex;justify-content:space-between;font-size:.72rem;color:var(--ink-3);margin-top:6px;font-variant-numeric:tabular-nums}
+
+/* Stat tiles: label (sentence case) + value (semibold, proportional figures). */
+.kpis{display:flex;gap:26px;margin-top:18px;flex-wrap:wrap;width:100%}
+.kpi .k-label{font-size:.68rem;color:var(--ink-3);text-transform:uppercase;letter-spacing:.07em}
+.kpi .k-value{font-size:1.5rem;font-weight:600;margin-top:2px;letter-spacing:-.02em}
+.kpi .k-sub{font-size:.7rem;color:var(--ink-3)}
+
+/* =============================== RECENT ================================== */
+.recent{grid-column:2;grid-row:1 / span 2;display:flex;flex-direction:column;min-height:0}
+.scroll{overflow-y:auto;flex:1;margin:0 -6px;padding:0 6px;scrollbar-width:thin;max-height:640px}
+.scroll::-webkit-scrollbar{width:7px}
+.scroll::-webkit-scrollbar-thumb{background:#3a3a40;border-radius:4px}
+.play{display:flex;gap:11px;padding:9px 0;border-bottom:1px solid var(--line);align-items:center}
+.play:last-child{border-bottom:none}
+.play-art{width:38px;height:38px;border-radius:5px;flex:none;object-fit:cover;background:var(--card-2)}
+.play-body{flex:1;min-width:0}
+.play-track{font-size:.85rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.play-artist{font-size:.75rem;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.play-when{font-size:.7rem;color:var(--ink-3);text-align:right;flex:none;font-variant-numeric:tabular-nums;line-height:1.35}
+
+/* ============================== TOP PANELS =============================== */
+.tops{grid-column:1;grid-row:2;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.rank{display:flex;flex-direction:column;gap:13px}
+.row{display:grid;grid-template-columns:16px 1fr auto;gap:10px;align-items:baseline}
+.row-n{font-size:.72rem;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.row-name{font-size:.87rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-detail{font-size:.72rem;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-count{font-size:.8rem;color:var(--ink-2);font-variant-numeric:tabular-nums}
+/* Magnitude bar: 6px thin, 4px rounded data-end, square at the baseline. */
+.mag{grid-column:2 / span 2;height:6px;background:var(--card-2);border-radius:3px;overflow:hidden;margin-top:5px}
+.mag i{display:block;height:100%;border-radius:0 4px 4px 0;transition:width .4s ease}
+.empty{font-size:.8rem;color:var(--ink-3);padding:14px 0;line-height:1.5}
+
+select{
+  background:var(--card-2);color:var(--ink);border:1px solid var(--line);
+  border-radius:9px;padding:7px 11px;font-size:.8rem;font-family:inherit;cursor:pointer;
+}
+select:focus{outline:2px solid var(--songs);outline-offset:1px}
+.note{font-size:.7rem;color:var(--ink-3);margin-top:14px}
+.err{background:#2a1618;border:1px solid #5b2a2e;color:#fca5a5;padding:11px 13px;border-radius:10px;font-size:.82rem;margin-bottom:16px}
+
+@media (max-width:980px){
+  .grid{grid-template-columns:1fr;grid-template-rows:auto auto auto}
+  .now{grid-column:1;grid-row:1}
+  .recent{grid-column:1;grid-row:3}
+  .tops{grid-column:1;grid-row:2;grid-template-columns:1fr}
+  .scroll{max-height:420px}
+  .art{width:104px;height:104px}
+  .now-track{font-size:1.3rem}
+}
+</style>
+</head>
+<body data-palette="#16A34A,#3B82C4,#C9762E">
+
+<!-- ================================ LOCK ================================= -->
+<div id="lock">
+  <div class="frame" id="frame">
+    <div class="lock-icon">🎧</div>
+    <div class="lock-title">Enter code</div>
+    <div class="display" id="display">&nbsp;</div>
+    <div class="keys">
+      <button class="dkey" data-d="1">1</button><button class="dkey" data-d="2">2</button><button class="dkey" data-d="3">3</button>
+      <button class="dkey" data-d="4">4</button><button class="dkey" data-d="5">5</button><button class="dkey" data-d="6">6</button>
+      <button class="dkey" data-d="7">7</button><button class="dkey" data-d="8">8</button><button class="dkey" data-d="9">9</button>
+      <span></span><button class="dkey" data-d="0">0</button><span></span>
+    </div>
+    <div class="actions">
+      <button class="del" id="del">delete</button>
+      <button class="call" id="go" title="Unlock">→</button>
+    </div>
+    <div class="lock-msg" id="lockmsg"></div>
+  </div>
+</div>
+
+<!-- ============================== DASHBOARD ============================== -->
+<div id="dash">
+  <div class="topbar">
+    <div>
+      <h1>What Mikael's listening to</h1>
+      <div class="sub" id="subline">&nbsp;</div>
+    </div>
+    <select id="window" aria-label="Time window for the top charts">
+      <option value="today">Today</option>
+      <option value="week" selected>This week</option>
+      <option value="month">This month</option>
+      <option value="year">This year</option>
+    </select>
+  </div>
+
+  <div id="errbox"></div>
+
+  <div class="grid">
+    <!-- NOW PLAYING -->
+    <section class="card now" aria-live="polite">
+      <img class="art" id="np-art" alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>">
+      <div class="now-body">
+        <div class="now-status" id="np-status">Loading…</div>
+        <div class="now-track" id="np-track">—</div>
+        <div class="now-artist" id="np-artist"></div>
+        <div class="now-album" id="np-album"></div>
+        <div id="np-progress" style="display:none">
+          <div class="bar-track"><div class="bar-fill" id="np-bar"></div></div>
+          <div class="times"><span id="np-elapsed">0:00</span><span id="np-total">0:00</span></div>
+        </div>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><div class="k-label">Plays today</div><div class="k-value" id="k-today">–</div></div>
+        <div class="kpi"><div class="k-label">Logged all time</div><div class="k-value" id="k-total">–</div></div>
+        <div class="kpi"><div class="k-label">Top genre this week</div><div class="k-value" id="k-genre" style="font-size:1.05rem">–</div></div>
+        <div class="kpi"><div class="k-label">Logging since</div><div class="k-value" id="k-since" style="font-size:1.05rem">–</div></div>
+      </div>
+    </section>
+
+    <!-- RECENT -->
+    <section class="card recent">
+      <h2><span class="swatch" style="background:var(--songs)"></span>Last 100 plays</h2>
+      <div class="scroll" id="recent-list"><div class="empty">Loading…</div></div>
+    </section>
+
+    <!-- TOP 5s -->
+    <div class="tops">
+      <section class="card">
+        <h2><span class="swatch" style="background:var(--songs)"></span>Top songs</h2>
+        <div class="rank" id="top-tracks"><div class="empty">Loading…</div></div>
+      </section>
+      <section class="card">
+        <h2><span class="swatch" style="background:var(--artists)"></span>Top artists</h2>
+        <div class="rank" id="top-artists"><div class="empty">Loading…</div></div>
+      </section>
+      <section class="card">
+        <h2><span class="swatch" style="background:var(--genres)"></span>Top genres</h2>
+        <div class="rank" id="top-genres"><div class="empty">Loading…</div></div>
+        <div class="note">Spotify tags genres on artists, not tracks — these come from the artists behind each play.</div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+/* API base is substituted at deploy time with the Tailscale Funnel URL. */
+const API_BASE = "https://mikael-pi.tail43e9f8.ts.net";
+
+const $ = id => document.getElementById(id);
+let token = sessionStorage.getItem("sp_token") || "";
+let npTimer = null, tickTimer = null;
+let progress = {ms:0, dur:0, playing:false};
+
+/* ------------------------------- helpers -------------------------------- */
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const mmss = ms => {
+  const t = Math.max(0, Math.floor(ms/1000));
+  return `${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`;
+};
+
+/* Placeholder artwork. The "nothing playing" state is common (any time Mikael
+   isn't listening), so it needs to look deliberate rather than like a broken image. */
+const BLANK = "data:image/svg+xml;utf8," + encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+     <rect width="100" height="100" fill="#1f1f23"/>
+     <text x="50" y="63" font-size="34" text-anchor="middle" fill="#4a4a52"
+           font-family="system-ui,sans-serif">&#9834;</text>
+   </svg>`);
+
+async function api(path){
+  const r = await fetch(API_BASE + path, {headers:{Authorization:"Bearer " + token}});
+  if(r.status === 401){ lockOut(); throw new Error("session expired"); }
+  if(!r.ok) throw new Error(`${path} → HTTP ${r.status}`);
+  return r.json();
+}
+
+function showErr(msg){
+  $("errbox").innerHTML = msg ? `<div class="err">${esc(msg)}</div>` : "";
+}
+
+/* -------------------------------- unlock -------------------------------- */
+let entry = "";
+const render = () => $("display").textContent = entry ? "•".repeat(entry.length) : " ";
+
+document.querySelectorAll(".dkey").forEach(b =>
+  b.addEventListener("click", () => { if(entry.length < 20){ entry += b.dataset.d; render(); } }));
+
+$("del").addEventListener("click", () => { entry = entry.slice(0,-1); render(); });
+$("go").addEventListener("click", submit);
+
+document.addEventListener("keydown", e => {
+  if($("lock").classList.contains("hidden")) return;
+  if(/^[0-9]$/.test(e.key) && entry.length < 20){ entry += e.key; render(); }
+  else if(e.key === "Backspace"){ entry = entry.slice(0,-1); render(); }
+  else if(e.key === "Enter"){ submit(); }
+});
+
+function reject(msg){
+  const f = $("frame");
+  f.classList.remove("shake"); void f.offsetWidth; f.classList.add("shake");
+  $("lockmsg").textContent = msg || "";
+  entry = ""; render();
+}
+
+async function submit(){
+  if(!entry) return;
+  $("go").disabled = true;
+  $("lockmsg").textContent = "";
+  try{
+    const r = await fetch(API_BASE + "/api/auth", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({password: entry})
+    });
+    if(r.status === 429){ reject("Too many attempts. Wait a few minutes."); return; }
+    if(!r.ok){ reject(""); return; }
+    const d = await r.json();
+    token = d.token;
+    sessionStorage.setItem("sp_token", token);
+    unlock();
+  }catch(err){
+    reject("Can't reach the server.");
+  }finally{
+    $("go").disabled = false;
+  }
+}
+
+function unlock(){
+  $("lock").classList.add("hidden");
+  $("dash").classList.add("shown");
+  start();
+}
+
+function lockOut(){
+  sessionStorage.removeItem("sp_token"); token = "";
+  clearInterval(npTimer); clearInterval(tickTimer);
+  $("dash").classList.remove("shown");
+  $("lock").classList.remove("hidden");
+  entry = ""; render();
+}
+
+/* ------------------------------ now playing ----------------------------- */
+async function loadNow(){
+  try{
+    const d = await api("/api/now-playing");
+    if(!d.playing || !d.track){
+      $("np-status").textContent = "Paused / idle";
+      $("np-track").textContent = "Nothing playing";
+      $("np-artist").textContent = "Scroll across for what came before →";
+      $("np-album").textContent = "";
+      $("np-art").src = BLANK;
+      $("np-progress").style.display = "none";
+      progress.playing = false;
+      return;
+    }
+    $("np-status").innerHTML =
+      `<span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span> Now playing`;
+    $("np-track").textContent = d.track;
+    $("np-artist").textContent = d.artist || "";
+    $("np-album").textContent = d.album || "";
+    $("np-art").src = d.art || BLANK;
+    $("np-progress").style.display = "block";
+    progress = {ms:d.progress_ms||0, dur:d.duration_ms||0, playing:true};
+    paint();
+  }catch(err){
+    if(String(err.message).includes("session")) return;
+    $("np-status").textContent = "Can't reach Spotify";
+    $("np-track").textContent = "Live track unavailable";
+    $("np-artist").textContent = "History below is still up to date.";
+    $("np-album").textContent = "";
+    $("np-art").src = BLANK;
+    $("np-progress").style.display = "none";
+    progress.playing = false;
+  }
+}
+
+function paint(){
+  const pct = progress.dur ? Math.min(100, progress.ms/progress.dur*100) : 0;
+  $("np-bar").style.width = pct + "%";
+  $("np-elapsed").textContent = mmss(progress.ms);
+  $("np-total").textContent = mmss(progress.dur);
+}
+
+/* Advance the bar locally between polls so it moves smoothly, not in 10s jumps. */
+function tick(){
+  if(progress.playing && progress.dur){
+    progress.ms = Math.min(progress.dur, progress.ms + 1000);
+    paint();
+  }
+}
+
+/* -------------------------------- recent -------------------------------- */
+async function loadRecent(){
+  try{
+    const d = await api("/api/recent?limit=100");
+    const el = $("recent-list");
+    if(!d.plays.length){
+      el.innerHTML = `<div class="empty">No plays logged yet. The poller runs every
+        5 minutes — play something and it'll appear.</div>`;
+    }else{
+      el.innerHTML = d.plays.map(p => `
+        <div class="play">
+          <img class="play-art" loading="lazy" alt="" src="${esc(p.art || BLANK)}">
+          <div class="play-body">
+            <div class="play-track">${esc(p.track)}</div>
+            <div class="play-artist">${esc(p.artist)}</div>
+          </div>
+          <div class="play-when">${esc(p.date)}<br>${esc(p.time)}</div>
+        </div>`).join("");
+    }
+    $("k-total").textContent = (d.total_plays ?? 0).toLocaleString();
+    $("k-since").textContent = d.history_since || "–";
+    $("subline").textContent = d.last_poll
+      ? `Updated ${new Date(d.last_poll).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}`
+      : "";
+    showErr("");
+  }catch(err){
+    if(String(err.message).includes("session")) return;
+    showErr("Couldn't load recent plays — " + err.message);
+  }
+}
+
+/* --------------------------------- tops --------------------------------- */
+const COLOURS = {tracks:"var(--songs)", artists:"var(--artists)", genres:"var(--genres)"};
+
+function renderRank(elId, rows, colour, emptyMsg){
+  const el = $(elId);
+  if(!rows || !rows.length){ el.innerHTML = `<div class="empty">${esc(emptyMsg)}</div>`; return; }
+  const max = Math.max(...rows.map(r => r.count)) || 1;
+  el.innerHTML = rows.map((r,i) => `
+    <div>
+      <div class="row">
+        <span class="row-n">${i+1}</span>
+        <span>
+          <span class="row-name">${esc(r.name)}</span><br>
+          <span class="row-detail">${esc(r.detail || "")}</span>
+        </span>
+        <span class="row-count">${r.count}</span>
+      </div>
+      <div class="mag"><i style="width:${(r.count/max*100).toFixed(1)}%;background:${colour}"></i></div>
+    </div>`).join("");
+}
+
+async function loadTop(){
+  const w = $("window").value;
+  try{
+    const d = await api("/api/top?window=" + encodeURIComponent(w));
+    const none = "Nothing logged in this window yet.";
+    renderRank("top-tracks",  d.tracks,  COLOURS.tracks,  none);
+    renderRank("top-artists", d.artists, COLOURS.artists, none);
+    renderRank("top-genres",  d.genres,  COLOURS.genres,
+      "No genres yet — they fill in as the poller catalogues each artist.");
+    $("k-today").textContent = (d.window === "today")
+      ? d.tracks.reduce((n,t) => n + t.count, 0).toLocaleString()
+      : $("k-today").textContent;
+  }catch(err){
+    if(String(err.message).includes("session")) return;
+    showErr("Couldn't load top charts — " + err.message);
+  }
+}
+
+/* Plays today is its own fixed-window figure, independent of the dropdown. */
+async function loadToday(){
+  try{
+    const d = await api("/api/top?window=today");
+    $("k-today").textContent = d.tracks.reduce((n,t) => n + t.count, 0).toLocaleString();
+    const g = await api("/api/top?window=week");
+    $("k-genre").textContent = g.genres.length ? g.genres[0].name : "–";
+  }catch(err){ /* non-critical figures - leave the placeholder */ }
+}
+
+$("window").addEventListener("change", loadTop);
+
+/* --------------------------------- boot --------------------------------- */
+function start(){
+  loadNow(); loadRecent(); loadTop(); loadToday();
+  clearInterval(npTimer); clearInterval(tickTimer);
+  npTimer = setInterval(loadNow, 10000);   // server caches 5s, so this is cheap
+  tickTimer = setInterval(tick, 1000);
+  setInterval(loadRecent, 60000);
+}
+
+render();
+if(token) unlock();   // resume an existing session without re-entering the code
+</script>
+</body>
+</html>
