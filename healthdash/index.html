@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>HealthDash</title>
+<style>
+  /* Tokens. Light values are the default; dark is *selected*, not an auto-flip.
+     Both the OS preference and an explicit data-theme stamp must win. */
+  :root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page:           #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --hairline:       #e1e0d9;
+    --border-ring:    rgba(11,11,11,0.10);
+    --accent:         #2a78d6;
+    --good:           #0ca30c;
+    --critical:       #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --page:           #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --hairline:       #2c2c2a;
+      --border-ring:    rgba(255,255,255,0.10);
+      --accent:         #3987e5;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --page:           #0d0d0d;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --hairline:       #2c2c2a;
+    --border-ring:    rgba(255,255,255,0.10);
+    --accent:         #3987e5;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 32px 20px 64px; }
+
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 4px; }
+  h1 { font-size: 1.5rem; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  .sub { color: var(--text-muted); font-size: 0.875rem; margin: 0 0 28px; }
+
+  button {
+    font: inherit; cursor: pointer; border-radius: 8px;
+    border: 1px solid var(--border-ring); background: var(--surface-1);
+    color: var(--text-primary); padding: 8px 14px;
+  }
+  button:hover { border-color: var(--text-muted); }
+  .primary { background: var(--accent); border-color: transparent; color: #fff; font-weight: 500; padding: 11px 20px; }
+  .primary:hover { filter: brightness(1.08); border-color: transparent; }
+
+  /* Login */
+  .gate { max-width: 420px; margin: 12vh auto; text-align: center; }
+  .gate p { color: var(--text-secondary); font-size: 0.9375rem; margin: 8px 0 24px; }
+  .err {
+    margin-top: 20px; padding: 10px 14px; border-radius: 8px; font-size: 0.875rem;
+    background: color-mix(in srgb, var(--critical) 10%, transparent);
+    color: var(--critical); border: 1px solid color-mix(in srgb, var(--critical) 30%, transparent);
+  }
+
+  /* Tiles */
+  .cat { margin-top: 32px; }
+  .cat h2 {
+    font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-muted);
+    margin: 0 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--hairline);
+  }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 12px; }
+  .tile {
+    background: var(--surface-1); border: 1px solid var(--border-ring);
+    border-radius: 10px; padding: 14px 16px;
+  }
+  .tile .label { font-size: 0.8125rem; color: var(--text-secondary); }
+  .tile .value { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; margin: 2px 0 0; }
+  .tile .unit { font-size: 0.9375rem; font-weight: 500; color: var(--text-secondary); margin-left: 3px; }
+  .tile .meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+  .tile.empty .value { color: var(--text-muted); font-weight: 400; font-size: 1.25rem; }
+
+  /* Empty state — this is what day one actually looks like, so it earns real design. */
+  .onboard {
+    background: var(--surface-1); border: 1px solid var(--border-ring);
+    border-radius: 10px; padding: 24px; margin-top: 24px;
+  }
+  .onboard h3 { margin: 0 0 6px; font-size: 1rem; font-weight: 600; }
+  .onboard p { margin: 0 0 16px; color: var(--text-secondary); font-size: 0.9375rem; }
+  .onboard ol { margin: 0; padding-left: 20px; color: var(--text-secondary); font-size: 0.9375rem; }
+  .onboard li { margin-bottom: 6px; }
+  .onboard li.done { color: var(--good); }
+
+  footer {
+    margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--hairline);
+    color: var(--text-muted); font-size: 0.75rem;
+    display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- Sign-in gate -->
+  <section id="gate" class="gate hidden">
+    <h1>HealthDash</h1>
+    <p>Private health dashboard. Sign in with the authorised Google account.</p>
+    <button class="primary" id="signin">Sign in with Google</button>
+    <div id="gate-error" class="err hidden"></div>
+  </section>
+
+  <!-- Dashboard -->
+  <section id="dash" class="hidden">
+    <header>
+      <h1>HealthDash</h1>
+      <button id="signout">Sign out</button>
+    </header>
+    <p class="sub" id="subtitle">Loading…</p>
+
+    <div id="onboard" class="onboard hidden">
+      <h3>No data yet</h3>
+      <p>The dashboard is live and the store is empty — that's expected until the first source is connected.</p>
+      <ol id="onboard-steps">
+        <li class="done">Database, API and sign-in working</li>
+        <li>Connect WHOOP (sleep, recovery, strain)</li>
+        <li>Ingest medical records from the Health folder</li>
+        <li>Connect Apple Health (brings Renpho weight with it)</li>
+        <li>Connect Govee temperature</li>
+      </ol>
+    </div>
+
+    <div id="categories"></div>
+
+    <footer>
+      <span id="stats"></span>
+      <span>Records what your devices measured. Not medical advice.</span>
+    </footer>
+  </section>
+
+</div>
+
+<script>
+// Replaced at deploy time with the Tailscale Funnel URL, same pattern as /spotify.
+const API_BASE = "https://mikael-pi.tail43e9f8.ts.net:8443";
+const TOKEN_KEY = "healthdash_token";
+
+const $ = (id) => document.getElementById(id);
+
+const CATEGORY_LABELS = {
+  body: "Body", sleep: "Sleep", recovery: "Recovery",
+  activity: "Activity", environment: "Environment",
+};
+
+// Explicit reading order — alphabetical would lead with Activity and bury Sleep.
+// Anything not listed falls to the end, alphabetically, rather than disappearing.
+const CATEGORY_ORDER = ["recovery", "sleep", "body", "activity", "environment"];
+
+function categoryRank(cat) {
+  const i = CATEGORY_ORDER.indexOf(cat);
+  return i === -1 ? CATEGORY_ORDER.length : i;
+}
+
+const ERRORS = {
+  denied: "Sign-in was cancelled.",
+  bad_state: "Sign-in expired or was tampered with. Try again.",
+  exchange_failed: "Google sign-in failed. Check the server configuration.",
+  not_allowed: "That Google account is not authorised for this dashboard.",
+};
+
+function getToken() { return localStorage.getItem(TOKEN_KEY); }
+function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
+function clearToken() { localStorage.removeItem(TOKEN_KEY); }
+
+// The callback hands the token back in the URL fragment — fragments are never
+// sent to a server, so the token stays out of access logs and Referer headers.
+function consumeFragment() {
+  const hash = window.location.hash.slice(1);
+  if (!hash) return null;
+  const params = new URLSearchParams(hash);
+  history.replaceState(null, "", window.location.pathname + window.location.search);
+  if (params.get("token")) { setToken(params.get("token")); return null; }
+  return params.get("error");
+}
+
+function showGate(errCode) {
+  $("gate").classList.remove("hidden");
+  $("dash").classList.add("hidden");
+  if (errCode) {
+    const box = $("gate-error");
+    box.textContent = ERRORS[errCode] || "Sign-in failed.";
+    box.classList.remove("hidden");
+  }
+}
+
+function relativeTime(iso) {
+  if (!iso) return "no readings";
+  const then = new Date(iso.replace(" ", "T"));
+  const mins = Math.round((Date.now() - then.getTime()) / 60000);
+  if (isNaN(mins)) return "";
+  if (mins < 2) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs} hr ago`;
+  const days = Math.round(hrs / 24);
+  return days === 1 ? "yesterday" : `${days} days ago`;
+}
+
+function render(data) {
+  const latestBy = {};
+  (data.latest || []).forEach((l) => { latestBy[l.metric] = l; });
+
+  const hasData = (data.total_observations || 0) > 0;
+  $("onboard").classList.toggle("hidden", hasData);
+
+  const groups = {};
+  (data.metrics || []).forEach((m) => {
+    (groups[m.category || "other"] ||= []).push(m);
+  });
+
+  const container = $("categories");
+  container.innerHTML = "";
+
+  // With no data at all, the onboarding panel says everything the tiles would.
+  if (!hasData) {
+    $("subtitle").textContent = "Connected — waiting for the first source.";
+    $("stats").textContent = "0 observations";
+    return;
+  }
+
+  Object.keys(groups)
+    .sort((a, b) => categoryRank(a) - categoryRank(b) || a.localeCompare(b))
+    .forEach((cat) => {
+    const section = document.createElement("section");
+    section.className = "cat";
+
+    const h2 = document.createElement("h2");
+    h2.textContent = CATEGORY_LABELS[cat] || cat;
+    section.appendChild(h2);
+
+    const tiles = document.createElement("div");
+    tiles.className = "tiles";
+
+    groups[cat].forEach((m) => {
+      const l = latestBy[m.metric];
+      const tile = document.createElement("div");
+      tile.className = "tile" + (l ? "" : " empty");
+
+      const label = document.createElement("div");
+      label.className = "label";
+      label.textContent = m.display_name;
+      tile.appendChild(label);
+
+      const value = document.createElement("div");
+      value.className = "value";
+      if (l && l.value_num !== null && l.value_num !== undefined) {
+        value.textContent = Number(l.value_num).toLocaleString(undefined, { maximumFractionDigits: 1 });
+        const unit = document.createElement("span");
+        unit.className = "unit";
+        unit.textContent = m.unit;
+        value.appendChild(unit);
+      } else if (l && l.value_text) {
+        value.textContent = l.value_text;
+      } else {
+        value.textContent = "—";
+      }
+      tile.appendChild(value);
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.textContent = l ? `${relativeTime(l.recorded_at)} · ${l.source}` : "not connected";
+      tile.appendChild(meta);
+
+      tiles.appendChild(tile);
+    });
+
+    section.appendChild(tiles);
+    container.appendChild(section);
+  });
+
+  const sources = Object.entries(data.by_source || {})
+    .map(([s, n]) => `${s} ${n}`).join(" · ");
+  $("subtitle").textContent = sources || "Connected.";
+  $("stats").textContent =
+    `${(data.total_observations || 0).toLocaleString()} observations · ${data.documents || 0} documents`;
+}
+
+async function load() {
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_BASE}/api/metrics`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.status === 401) { clearToken(); showGate(); return; }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    $("gate").classList.add("hidden");
+    $("dash").classList.remove("hidden");
+    render(data);
+  } catch (e) {
+    $("dash").classList.remove("hidden");
+    $("subtitle").textContent = "Could not reach the dashboard API.";
+    $("stats").textContent = String(e);
+  }
+}
+
+$("signin").addEventListener("click", () => {
+  window.location.href = `${API_BASE}/api/auth/login`;
+});
+$("signout").addEventListener("click", () => {
+  clearToken();
+  window.location.reload();
+});
+
+const fragmentError = consumeFragment();
+if (fragmentError) showGate(fragmentError);
+else if (getToken()) load();
+else showGate();
+</script>
+
+</body>
+</html>
