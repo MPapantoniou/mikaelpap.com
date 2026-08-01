@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HealthDash — Privacy Policy</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb; --page: #f9f9f7;
+    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #898781;
+    --hairline: #e1e0d9; --border-ring: rgba(11,11,11,0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-1: #1a1a19; --page: #0d0d0d;
+      --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
+      --hairline: #2c2c2a; --border-ring: rgba(255,255,255,0.10);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1: #1a1a19; --page: #0d0d0d;
+    --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
+    --hairline: #2c2c2a; --border-ring: rgba(255,255,255,0.10);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; padding: 48px 20px 80px; }
+  h1 { font-size: 1.75rem; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .updated { color: var(--text-muted); font-size: 0.875rem; margin: 0 0 32px; }
+  h2 {
+    font-size: 1.0625rem; font-weight: 600; margin: 32px 0 8px;
+    padding-top: 20px; border-top: 1px solid var(--hairline);
+  }
+  p, li { color: var(--text-secondary); font-size: 0.9375rem; }
+  ul { padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  strong { color: var(--text-primary); font-weight: 600; }
+  .lead {
+    background: var(--surface-1); border: 1px solid var(--border-ring);
+    border-radius: 10px; padding: 18px 20px; margin-bottom: 8px;
+  }
+  .lead p { margin: 0; color: var(--text-primary); }
+  footer {
+    margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--hairline);
+    color: var(--text-muted); font-size: 0.8125rem;
+  }
+  a { color: inherit; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>HealthDash — Privacy Policy</h1>
+  <p class="updated">Last updated 1 August 2026</p>
+
+  <div class="lead">
+    <p><strong>HealthDash is a private, single-user application built and operated by one
+    person for his own use.</strong> It is not a product, not offered to the public, and has
+    no other users. All data it holds is stored on a Raspberry Pi on a private home
+    network and is never sold, shared, or transmitted to any third party.</p>
+  </div>
+
+  <h2>Who runs this</h2>
+  <p>HealthDash is built and run by Mikael Papantoniou as a personal project. The only
+  person who can sign in is the single Google account on its allowlist. There is no
+  sign-up, and no mechanism for anyone else to create an account.</p>
+
+  <h2>What data is collected</h2>
+  <p>Only data belonging to the operator, drawn from services he has personally
+  authorised:</p>
+  <ul>
+    <li><strong>WHOOP</strong> — sleep, recovery, physiological cycles, workouts, body
+      measurements, and where the hardware supports it, skin temperature and blood
+      oxygen.</li>
+    <li><strong>Apple Health</strong> — metrics exported from his own iPhone.</li>
+    <li><strong>Renpho</strong> — body-composition readings, received via Apple Health.</li>
+    <li><strong>Govee</strong> — ambient temperature and humidity from his own sensor.</li>
+    <li><strong>Personal medical documents</strong> — his own records, added manually.</li>
+  </ul>
+  <p>No data is collected from anyone else. There are no analytics, no advertising
+  identifiers, no tracking pixels, and no third-party scripts on this site.</p>
+
+  <h2>Where the data is stored</h2>
+  <p>All data is stored in a SQLite database on a Raspberry Pi on a private home
+  network. It is not stored in any cloud database, and the server is not shared with
+  any other party. Personal medical documents are held only on that device and are
+  deliberately excluded from any synchronisation to external services.</p>
+
+  <h2>How the data is used</h2>
+  <p>Solely to display the operator's own health information back to him in a personal
+  dashboard. It is not analysed for any commercial purpose, not used to train any
+  model, not profiled, and not disclosed to anyone.</p>
+
+  <h2>Authentication</h2>
+  <p>Sign-in uses Google OAuth. HealthDash requests only the <code>openid</code> and
+  <code>email</code> scopes — enough to confirm which account is signing in, and nothing
+  more. It has no access to Gmail, Drive, Calendar, or contacts. It does not store a
+  Google refresh token and holds no ongoing access to any Google account.</p>
+
+  <h2>Data sharing</h2>
+  <p><strong>None.</strong> Data is never sold, rented, shared, or transferred. There are no
+  advertisers, data brokers, analytics providers, or third-party processors. Data is
+  disclosed only where legally compelled.</p>
+
+  <h2>Retention and deletion</h2>
+  <p>Data is retained for as long as the operator finds it useful, and can be deleted by
+  him at any time by removing it from the device. Access granted to HealthDash by any
+  connected service can be revoked at any time from that service's own settings — for
+  WHOOP, via the WHOOP app's connected-apps screen; for Google, via the Google account
+  permissions page. Revoking access stops all further data collection immediately.</p>
+
+  <h2>Security</h2>
+  <p>All connections use HTTPS. The API is reachable only through an authenticated
+  tunnel, binds to localhost on the server itself, and every endpoint carrying health
+  data requires a valid signed session belonging to an allowlisted account. Credentials
+  are stored in a permission-restricted file on the device and are never committed to
+  source control.</p>
+
+  <h2>Not medical advice</h2>
+  <p>HealthDash displays measurements recorded by consumer devices. It is not a medical
+  device, provides no diagnosis or clinical interpretation, and must not be relied on
+  for medical decisions.</p>
+
+  <h2>Children</h2>
+  <p>HealthDash is used by one adult and is not directed at children.</p>
+
+  <h2>Changes</h2>
+  <p>Any change to this policy will be reflected on this page with an updated date.</p>
+
+  <h2>Contact</h2>
+  <p>Questions about this policy: <a href="mailto:mikaelpapa@gmail.com">mikaelpapa@gmail.com</a></p>
+
+  <footer>
+    HealthDash is a personal project. <a href="/healthdash/">Back to the dashboard</a>.
+  </footer>
+
+</div>
+</body>
+</html>
