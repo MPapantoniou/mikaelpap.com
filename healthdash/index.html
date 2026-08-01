@@ -17,7 +17,12 @@
     --text-muted:     #898781;
     --hairline:       #e1e0d9;
     --border-ring:    rgba(11,11,11,0.10);
+    /* Chart hue: categorical slot 1. Validated against both surfaces —
+       lightness band, chroma floor and >=3:1 contrast all pass. */
     --accent:         #2a78d6;
+    --series:         #2a78d6;
+    --series-wash:    rgba(42,120,214,0.10);   /* area fill: a wash, never a block */
+    --de-emphasis:    #c3c2b7;                 /* sparkline history behind the accent */
     --good:           #0ca30c;
     --critical:       #d03b3b;
   }
@@ -31,7 +36,11 @@
       --text-muted:     #898781;
       --hairline:       #2c2c2a;
       --border-ring:    rgba(255,255,255,0.10);
+      /* Dark steps are selected for the dark band, not an automatic flip. */
       --accent:         #3987e5;
+      --series:         #3987e5;
+      --series-wash:    rgba(57,135,229,0.12);
+      --de-emphasis:    #383835;
     }
   }
   :root[data-theme="dark"] {
@@ -44,6 +53,9 @@
     --hairline:       #2c2c2a;
     --border-ring:    rgba(255,255,255,0.10);
     --accent:         #3987e5;
+    --series:         #3987e5;
+    --series-wash:    rgba(57,135,229,0.12);
+    --de-emphasis:    #383835;
   }
 
   * { box-sizing: border-box; }
@@ -109,6 +121,57 @@
   .src-state.ok { color: var(--good); }
   .src-state.bad { color: var(--critical); }
 
+  /* Tiles become selectable once they carry a trend */
+  .tile.has-data { cursor: pointer; }
+  .tile.has-data:hover { border-color: var(--text-muted); }
+  .tile.selected { border-color: var(--series); }
+  .tile .spark { display: block; width: 100%; height: 28px; margin-top: 8px; }
+
+  /* Detail chart */
+  .chart-card {
+    background: var(--surface-1); border: 1px solid var(--border-ring);
+    border-radius: 10px; padding: 18px 20px 12px; margin-top: 20px;
+  }
+  .chart-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 2px;
+  }
+  .chart-title { font-size: 1rem; font-weight: 600; }
+  .chart-sub { font-size: 0.8125rem; color: var(--text-muted); }
+  .ranges { display: flex; gap: 6px; }
+  .ranges button { padding: 4px 10px; font-size: 0.8125rem; border-radius: 6px; }
+  .ranges button[aria-pressed="true"] {
+    border-color: var(--series); color: var(--series); font-weight: 600;
+  }
+  .chart-wrap { position: relative; overflow-x: auto; }
+  svg.chart { display: block; width: 100%; height: 220px; }
+  /* Axis and value text wear text tokens, never the series color. */
+  svg.chart text { fill: var(--text-muted); font-size: 11px; }
+  svg.chart text.endlabel { fill: var(--text-primary); font-weight: 600; font-size: 12px; }
+  svg.chart .grid { stroke: var(--hairline); stroke-width: 1; }
+  svg.chart .axis { stroke: var(--de-emphasis); stroke-width: 1; }
+  .tick { font-variant-numeric: tabular-nums; }
+
+  .tip {
+    position: absolute; pointer-events: none; opacity: 0; transition: opacity .12s;
+    background: var(--surface-1); border: 1px solid var(--border-ring);
+    border-radius: 8px; padding: 6px 10px; font-size: 0.8125rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.10); white-space: nowrap; z-index: 5;
+  }
+  .tip .tip-date { color: var(--text-muted); font-size: 0.75rem; }
+  .tip .tip-val { color: var(--text-primary); font-weight: 600; }
+
+  .table-toggle {
+    background: none; border: none; padding: 6px 0; font-size: 0.8125rem;
+    color: var(--text-muted); cursor: pointer; text-decoration: underline;
+  }
+  table.data { width: 100%; border-collapse: collapse; font-size: 0.8125rem; margin-top: 6px; }
+  table.data th, table.data td {
+    text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--hairline);
+  }
+  table.data th { color: var(--text-muted); font-weight: 600; }
+  table.data td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
   /* Empty state — this is what day one actually looks like, so it earns real design. */
   .onboard {
     background: var(--surface-1); border: 1px solid var(--border-ring);
@@ -170,6 +233,28 @@
         <li>Connect Apple Health (brings Renpho weight with it)</li>
         <li>Connect Govee temperature</li>
       </ol>
+    </div>
+
+    <!-- Detail chart for the selected metric. Single series, so no legend —
+         the title names what is plotted. -->
+    <div id="chart-card" class="chart-card hidden">
+      <div class="chart-head">
+        <div>
+          <div class="chart-title" id="chart-title">—</div>
+          <div class="chart-sub" id="chart-sub"></div>
+        </div>
+        <div class="ranges" id="ranges">
+          <button data-days="7"  aria-pressed="false">7d</button>
+          <button data-days="30" aria-pressed="true">30d</button>
+          <button data-days="90" aria-pressed="false">90d</button>
+        </div>
+      </div>
+      <div class="chart-wrap" id="chart-wrap">
+        <svg class="chart" id="chart" role="img" aria-labelledby="chart-title"></svg>
+        <div class="tip" id="tip"></div>
+      </div>
+      <button class="table-toggle" id="table-toggle" aria-expanded="false">Show data table</button>
+      <div id="table-holder" class="hidden"></div>
     </div>
 
     <div id="categories"></div>
@@ -316,6 +401,26 @@ function render(data) {
       meta.textContent = l ? `${relativeTime(l.recorded_at)} · ${l.source}` : "not connected";
       tile.appendChild(meta);
 
+      // Sparkline + click-through only where there's actually a trend to show.
+      const trend = (data.trends || {})[m.metric] || [];
+      tile.dataset.metric = m.metric;
+      if (trend.length >= 2) {
+        const spark = document.createElementNS(SVG_NS, "svg");
+        spark.setAttribute("class", "spark");
+        spark.setAttribute("aria-hidden", "true");
+        tile.appendChild(spark);
+        drawSparkline(spark, trend);
+
+        tile.classList.add("has-data");
+        tile.setAttribute("role", "button");
+        tile.setAttribute("tabindex", "0");
+        const open = () => selectMetric(m.metric, m);
+        tile.addEventListener("click", open);
+        tile.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
+        });
+      }
+
       tiles.appendChild(tile);
     });
 
@@ -323,12 +428,261 @@ function render(data) {
     container.appendChild(section);
   });
 
+  // Open the first metric that has a trend, so the chart isn't an empty frame.
+  if (!chartState.metric) {
+    const first = (data.metrics || []).find(
+      m => ((data.trends || {})[m.metric] || []).length >= 2);
+    if (first) selectMetric(first.metric, first);
+  }
+
   const sources = Object.entries(data.by_source || {})
     .map(([s, n]) => `${s} ${n}`).join(" · ");
   $("subtitle").textContent = sources || "Connected.";
   $("stats").textContent =
     `${(data.total_observations || 0).toLocaleString()} observations · ${data.documents || 0} documents`;
 }
+
+// --------------------------------------------------------------------------- //
+// charts
+// --------------------------------------------------------------------------- //
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+const el = (name, attrs = {}) => {
+  const n = document.createElementNS(SVG_NS, name);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  return n;
+};
+
+let chartState = { metric: null, days: 30, series: [], meta: null };
+
+// Series arrive newest-first from the API; charts read oldest-first.
+const chronological = (s) => [...s].filter(d => d.value !== null).reverse();
+
+function niceTicks(min, max, count = 4) {
+  if (min === max) { const p = Math.abs(min) * 0.1 || 1; min -= p; max += p; }
+  const raw = (max - min) / count;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= raw) || mag * 10;
+  const lo = Math.floor(min / step) * step;
+  const ticks = [];
+  for (let v = lo; v <= max + step * 0.5; v += step) ticks.push(Number(v.toFixed(6)));
+  return ticks;
+}
+
+function drawSparkline(svg, series) {
+  // 12-point trend per the stat-tile contract: history recessive, latest in accent.
+  const pts = chronological(series).slice(-12);
+  svg.innerHTML = "";
+  if (pts.length < 2) return;
+
+  const W = 100, H = 28, pad = 3;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("preserveAspectRatio", "none");
+
+  const vals = pts.map(p => p.value);
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const x = i => pad + (i * (W - pad * 2)) / (pts.length - 1);
+  const y = v => hi === lo ? H / 2 : H - pad - ((v - lo) / (hi - lo)) * (H - pad * 2);
+
+  svg.appendChild(el("polyline", {
+    points: pts.map((p, i) => `${x(i)},${y(p.value)}`).join(" "),
+    fill: "none", stroke: "var(--de-emphasis)", "stroke-width": 1.5,
+    "stroke-linejoin": "round", "stroke-linecap": "round",
+    "vector-effect": "non-scaling-stroke",
+  }));
+  // Current point in the accent — the one thing allowed to be loud.
+  svg.appendChild(el("circle", {
+    cx: x(pts.length - 1), cy: y(vals[vals.length - 1]), r: 2.5,
+    fill: "var(--series)", stroke: "var(--surface-1)", "stroke-width": 1.5,
+  }));
+}
+
+function drawChart() {
+  const svg = $("chart");
+  const tip = $("tip");
+  svg.innerHTML = "";
+  const pts = chronological(chartState.series);
+  const meta = chartState.meta || {};
+
+  if (pts.length < 2) {
+    const t = el("text", { x: 12, y: 40 });
+    t.textContent = pts.length === 1
+      ? "Only one reading so far — a trend needs at least two."
+      : "No readings in this range.";
+    svg.appendChild(t);
+    return;
+  }
+
+  const W = 900, H = 220;
+  const m = { top: 16, right: 58, bottom: 26, left: 46 };
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+  const vals = pts.map(p => p.value);
+  const ticks = niceTicks(Math.min(...vals), Math.max(...vals));
+  const lo = ticks[0], hi = ticks[ticks.length - 1];
+  const x = i => m.left + (i * (W - m.left - m.right)) / (pts.length - 1);
+  const y = v => H - m.bottom - ((v - lo) / (hi - lo || 1)) * (H - m.top - m.bottom);
+
+  // Gridlines: hairline, solid, recessive — never dashed.
+  ticks.forEach(t => {
+    svg.appendChild(el("line", {
+      x1: m.left, x2: W - m.right, y1: y(t), y2: y(t), class: "grid",
+    }));
+    const lbl = el("text", {
+      x: m.left - 8, y: y(t) + 4, "text-anchor": "end", class: "tick",
+    });
+    lbl.textContent = Number(t.toFixed(2)).toLocaleString();
+    svg.appendChild(lbl);
+  });
+
+  // Area wash under the line, then the line itself at 2px.
+  svg.appendChild(el("path", {
+    d: `M${x(0)},${y(lo)} ` + pts.map((p, i) => `L${x(i)},${y(p.value)}`).join(" ")
+       + ` L${x(pts.length - 1)},${y(lo)} Z`,
+    fill: "var(--series-wash)", stroke: "none",
+  }));
+  svg.appendChild(el("polyline", {
+    points: pts.map((p, i) => `${x(i)},${y(p.value)}`).join(" "),
+    fill: "none", stroke: "var(--series)", "stroke-width": 2,
+    "stroke-linejoin": "round", "stroke-linecap": "round",
+  }));
+
+  // Endpoint marker with a 2px surface ring, plus a single direct label.
+  const last = pts[pts.length - 1];
+  svg.appendChild(el("circle", {
+    cx: x(pts.length - 1), cy: y(last.value), r: 4.5,
+    fill: "var(--series)", stroke: "var(--surface-1)", "stroke-width": 2,
+  }));
+  // Number only — the unit is already in the subtitle, and appending it here
+  // overflowed the right margin and clipped the text.
+  const endLbl = el("text", {
+    x: x(pts.length - 1) + 10, y: y(last.value) + 4, class: "endlabel",
+  });
+  endLbl.textContent = Number(last.value).toLocaleString();
+  svg.appendChild(endLbl);
+
+  // X axis: first and last date only. Labelling every point is noise.
+  svg.appendChild(el("line", {
+    x1: m.left, x2: W - m.right, y1: H - m.bottom, y2: H - m.bottom, class: "axis",
+  }));
+  [[0, "start"], [pts.length - 1, "end"]].forEach(([i, anchor]) => {
+    const t = el("text", { x: x(i), y: H - m.bottom + 16, "text-anchor": anchor });
+    t.textContent = new Date(pts[i].date).toLocaleDateString(undefined,
+      { day: "numeric", month: "short" });
+    svg.appendChild(t);
+  });
+
+  // Hover layer: crosshair + tooltip, required by default on a line chart.
+  const focusLine = el("line", {
+    y1: m.top, y2: H - m.bottom, class: "grid", opacity: 0,
+    stroke: "var(--text-muted)",
+  });
+  const focusDot = el("circle", {
+    r: 4.5, fill: "var(--series)", stroke: "var(--surface-1)",
+    "stroke-width": 2, opacity: 0,
+  });
+  svg.appendChild(focusLine);
+  svg.appendChild(focusDot);
+
+  const hit = el("rect", {
+    x: m.left, y: m.top, width: W - m.left - m.right, height: H - m.top - m.bottom,
+    fill: "transparent", style: "cursor:crosshair",
+  });
+  svg.appendChild(hit);
+
+  const move = (ev) => {
+    const box = svg.getBoundingClientRect();
+    const px = ((ev.clientX - box.left) / box.width) * W;
+    let i = Math.round(((px - m.left) / (W - m.left - m.right)) * (pts.length - 1));
+    i = Math.max(0, Math.min(pts.length - 1, i));
+    const p = pts[i];
+    focusLine.setAttribute("x1", x(i));
+    focusLine.setAttribute("x2", x(i));
+    focusLine.setAttribute("opacity", 1);
+    focusDot.setAttribute("cx", x(i));
+    focusDot.setAttribute("cy", y(p.value));
+    focusDot.setAttribute("opacity", 1);
+
+    tip.innerHTML =
+      `<div class="tip-date">${new Date(p.date).toLocaleDateString(undefined,
+        { weekday: "short", day: "numeric", month: "short" })}</div>` +
+      `<div class="tip-val">${Number(p.value).toLocaleString()} ${meta.unit || ""}</div>` +
+      (p.readings > 1 ? `<div class="tip-date">${p.readings} readings</div>` : "");
+    tip.style.opacity = 1;
+    const wrap = $("chart-wrap").getBoundingClientRect();
+    tip.style.left = Math.min(
+      Math.max(0, ev.clientX - wrap.left + 12), wrap.width - tip.offsetWidth - 4) + "px";
+    tip.style.top = Math.max(0, ev.clientY - wrap.top - 46) + "px";
+  };
+  const leave = () => {
+    tip.style.opacity = 0;
+    focusLine.setAttribute("opacity", 0);
+    focusDot.setAttribute("opacity", 0);
+  };
+  hit.addEventListener("mousemove", move);
+  hit.addEventListener("mouseleave", leave);
+  hit.addEventListener("touchmove", (e) => { move(e.touches[0]); e.preventDefault(); });
+  hit.addEventListener("touchend", leave);
+}
+
+function renderTable() {
+  const holder = $("table-holder");
+  const pts = chronological(chartState.series).reverse();   // newest first to read
+  const unit = (chartState.meta || {}).unit || "";
+  holder.innerHTML =
+    `<table class="data"><thead><tr><th>Date</th><th>Value</th><th>Readings</th>` +
+    `<th>Source</th></tr></thead><tbody>` +
+    pts.map(p => `<tr><td>${p.date}</td>` +
+      `<td class="num">${Number(p.value).toLocaleString()} ${unit}</td>` +
+      `<td class="num">${p.readings}</td><td>${p.source || ""}</td></tr>`).join("") +
+    `</tbody></table>`;
+}
+
+async function selectMetric(metric, meta) {
+  chartState.metric = metric;
+  chartState.meta = meta;
+  document.querySelectorAll(".tile").forEach(t =>
+    t.classList.toggle("selected", t.dataset.metric === metric));
+
+  const card = $("chart-card");
+  card.classList.remove("hidden");
+  $("chart-title").textContent = meta.display_name;
+  $("chart-sub").textContent = `Daily ${meta.aggregation === "sum" ? "total" :
+    meta.aggregation === "last" ? "latest reading" : meta.aggregation} · ${meta.unit}`;
+
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/series?metric=${encodeURIComponent(metric)}&days=${chartState.days}`,
+      { headers: { Authorization: `Bearer ${getToken()}` } });
+    const data = await res.json();
+    chartState.series = data.series || [];
+  } catch {
+    chartState.series = [];
+  }
+  drawChart();
+  if ($("table-toggle").getAttribute("aria-expanded") === "true") renderTable();
+}
+
+$("ranges").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-days]");
+  if (!btn) return;
+  chartState.days = Number(btn.dataset.days);
+  document.querySelectorAll("#ranges button").forEach(b =>
+    b.setAttribute("aria-pressed", String(b === btn)));
+  if (chartState.metric) selectMetric(chartState.metric, chartState.meta);
+});
+
+$("table-toggle").addEventListener("click", () => {
+  const btn = $("table-toggle");
+  const open = btn.getAttribute("aria-expanded") === "true";
+  btn.setAttribute("aria-expanded", String(!open));
+  btn.textContent = open ? "Show data table" : "Hide data table";
+  $("table-holder").classList.toggle("hidden", open);
+  if (!open) renderTable();
+});
+
+window.addEventListener("resize", () => { if (chartState.metric) drawChart(); });
 
 async function load() {
   const token = getToken();
