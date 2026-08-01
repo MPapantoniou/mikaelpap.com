@@ -97,6 +97,18 @@
   .tile .meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
   .tile.empty .value { color: var(--text-muted); font-weight: 400; font-size: 1.25rem; }
 
+  /* Source connections */
+  .sources { margin-top: 20px; display: grid; gap: 10px; }
+  .src {
+    background: var(--surface-1); border: 1px solid var(--border-ring);
+    border-radius: 10px; padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .src-name { font-weight: 600; font-size: 0.9375rem; }
+  .src-state { font-size: 0.8125rem; color: var(--text-muted); margin-top: 2px; }
+  .src-state.ok { color: var(--good); }
+  .src-state.bad { color: var(--critical); }
+
   /* Empty state — this is what day one actually looks like, so it earns real design. */
   .onboard {
     background: var(--surface-1); border: 1px solid var(--border-ring);
@@ -135,6 +147,18 @@
       <button id="signout">Sign out</button>
     </header>
     <p class="sub" id="subtitle">Loading…</p>
+
+    <!-- Source connections. WHOOP consent must be started from a fetch (which
+         carries the session token), never a bare link — see /api/whoop/login. -->
+    <div id="sources" class="sources hidden">
+      <div class="src">
+        <div>
+          <div class="src-name">WHOOP</div>
+          <div class="src-state" id="whoop-state">checking…</div>
+        </div>
+        <button id="whoop-connect" class="primary hidden">Connect WHOOP</button>
+      </div>
+    </div>
 
     <div id="onboard" class="onboard hidden">
       <h3>No data yet</h3>
@@ -186,6 +210,8 @@ const ERRORS = {
   not_allowed: "That Google account is not authorised for this dashboard.",
 };
 
+let pendingWhoop = null;   // set from the #whoop= fragment on return from consent
+
 function getToken() { return localStorage.getItem(TOKEN_KEY); }
 function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
 function clearToken() { localStorage.removeItem(TOKEN_KEY); }
@@ -198,6 +224,7 @@ function consumeFragment() {
   const params = new URLSearchParams(hash);
   history.replaceState(null, "", window.location.pathname + window.location.search);
   if (params.get("token")) { setToken(params.get("token")); return null; }
+  if (params.get("whoop")) { pendingWhoop = params.get("whoop"); return null; }
   return params.get("error");
 }
 
@@ -315,12 +342,81 @@ async function load() {
     $("gate").classList.add("hidden");
     $("dash").classList.remove("hidden");
     render(data);
+    await loadWhoopStatus();
+    if (pendingWhoop && WHOOP_MESSAGES[pendingWhoop]) {
+      $("whoop-state").textContent = WHOOP_MESSAGES[pendingWhoop];
+      $("whoop-state").className = "src-state bad";
+    }
   } catch (e) {
     $("dash").classList.remove("hidden");
     $("subtitle").textContent = "Could not reach the dashboard API.";
     $("stats").textContent = String(e);
   }
 }
+
+const WHOOP_MESSAGES = {
+  connected: null,   // success is shown by the status line itself
+  denied: "WHOOP sign-in was cancelled.",
+  bad_state: "WHOOP link expired. Try Connect again.",
+  failed: "WHOOP connection failed — check the redirect URI matches exactly.",
+};
+
+async function loadWhoopStatus() {
+  const stateEl = $("whoop-state");
+  const btn = $("whoop-connect");
+  $("sources").classList.remove("hidden");
+  try {
+    const res = await fetch(`${API_BASE}/api/whoop/status`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const s = await res.json();
+
+    if (!s.configured) {
+      stateEl.textContent = "not configured on the server";
+      stateEl.className = "src-state bad";
+      btn.classList.add("hidden");
+      return;
+    }
+    if (s.connected) {
+      stateEl.textContent = s.last_sync
+        ? `connected · last sync ${relativeTime(s.last_sync)}`
+        : "connected · not synced yet";
+      stateEl.className = "src-state ok";
+      btn.textContent = "Reconnect";
+      btn.classList.remove("hidden");
+    } else {
+      stateEl.textContent = "not connected";
+      stateEl.className = "src-state";
+      btn.textContent = "Connect WHOOP";
+      btn.classList.remove("hidden");
+    }
+  } catch (e) {
+    stateEl.textContent = "could not check status";
+    stateEl.className = "src-state bad";
+  }
+}
+
+// Must be a fetch, not a link: the session token lives in localStorage and is not
+// sent on a top-level navigation, so linking straight to /api/whoop/login would 401.
+$("whoop-connect").addEventListener("click", async () => {
+  const btn = $("whoop-connect");
+  btn.disabled = true;
+  btn.textContent = "Opening WHOOP…";
+  try {
+    const res = await fetch(`${API_BASE}/api/whoop/login`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+    else throw new Error(data.error || "no url returned");
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = "Connect WHOOP";
+    $("whoop-state").textContent = `could not start: ${e.message}`;
+    $("whoop-state").className = "src-state bad";
+  }
+});
 
 $("signin").addEventListener("click", () => {
   window.location.href = `${API_BASE}/api/auth/login`;
