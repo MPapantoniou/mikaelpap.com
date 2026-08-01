@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<title>Listening — MK</title>
+<title>Listening — RLM</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎧</text></svg>">
 <style>
 /* ---------------------------------------------------------------------------
@@ -211,7 +211,7 @@ select:focus{outline:2px solid var(--songs);outline-offset:1px}
 <div id="dash">
   <div class="topbar">
     <div>
-      <h1>What MK's listening to</h1>
+      <h1>What RLM's listening to</h1>
       <div class="sub" id="subline">&nbsp;</div>
     </div>
     <select id="window" aria-label="Time window for the top charts">
@@ -274,7 +274,7 @@ select:focus{outline:2px solid var(--songs);outline-offset:1px}
 
 <script>
 /* API base is substituted at deploy time with the Tailscale Funnel URL. */
-const API_BASE = "https://mikael-pi.tail43e9f8.ts.net";
+const API_BASE = "https://mikael-pi.tail43e9f8.ts.net/rlm";
 
 const $ = id => document.getElementById(id);
 let token = sessionStorage.getItem("sp_token") || "";
