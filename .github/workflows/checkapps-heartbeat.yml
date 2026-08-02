@@ -1,0 +1,88 @@
+# Deployed to .github/workflows/checkapps-heartbeat.yml in MPapantoniou/mikaelpap.com
+#
+# The only thing GitHub is asked to do here, and deliberately the only thing:
+# can the outside world reach the Pi? The Pi runs every real check itself and
+# serves the results live — but it cannot report its own death, and that is the
+# one state you most want the page to be honest about.
+#
+# It commits ONLY when the answer changes, so the steady state is zero commits
+# and zero Pages rebuilds. A stale checked_at while healthy is harmless: the
+# page reads this file only when the Pi is unreachable, and reaching that state
+# is itself a change, which produces a fresh commit.
+
+name: checkapps heartbeat
+
+on:
+  schedule:
+    # Every 30 minutes. GitHub routinely runs scheduled workflows 5-20 minutes
+    # late and occasionally skips one under load, so treat this as "roughly
+    # half-hourly" — the page always displays the real timestamp, never a promise.
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: checkapps-heartbeat
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Probe the Pi
+        id: probe
+        run: |
+          set -uo pipefail
+          URL="https://mikael-pi.tail43e9f8.ts.net/checkapps/healthz"
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 25 "$URL" || echo 000)
+          if [ "$CODE" = "200" ]; then
+            echo "ok=true"  >> "$GITHUB_OUTPUT"
+            echo "detail=HTTP 200" >> "$GITHUB_OUTPUT"
+          elif [ "$CODE" = "000" ]; then
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "detail=no response (connection failed or timed out)" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "detail=HTTP $CODE" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write heartbeat and commit only on change
+        env:
+          OK: ${{ steps.probe.outputs.ok }}
+          DETAIL: ${{ steps.probe.outputs.detail }}
+        run: |
+          set -euo pipefail
+          FILE=checkapps/heartbeat.json
+          PREV_OK=$(jq -r '.ok // empty' "$FILE" 2>/dev/null || true)
+          PREV_AT=$(jq -r '.checked_at // empty' "$FILE" 2>/dev/null || true)
+
+          # Refresh at least fortnightly even with no change. Partly so the file
+          # never looks abandoned, partly because GitHub disables cron on repos
+          # with no activity for 60 days — this keeps the repo ticking over.
+          STALE=false
+          if [ -n "$PREV_AT" ]; then
+            AGE=$(( ( $(date -u +%s) - $(date -u -d "$PREV_AT" +%s) ) / 86400 ))
+            [ "$AGE" -ge 14 ] && STALE=true
+          else
+            STALE=true
+          fi
+
+          if [ "$PREV_OK" = "$OK" ] && [ "$STALE" = "false" ]; then
+            echo "No change (ok=$OK) and file is fresh — nothing to commit."
+            exit 0
+          fi
+
+          mkdir -p checkapps
+          jq -n --argjson ok "$OK" --arg detail "$DETAIL" \
+                --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+                '{ok:$ok, detail:$detail, checked_at:$at}' > "$FILE"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$FILE"
+          git commit -m "chore(checkapps): Pi reachable=$OK ($DETAIL)"
+          git push
