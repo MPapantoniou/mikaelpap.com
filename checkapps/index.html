@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Unlisted on purpose: reachable by link, absent from search results. A
+     robots.txt Disallow would be worse than useless here — it stops crawlers
+     reading this very tag, which can leave the bare URL indexed anyway. -->
+<meta name="robots" content="noindex, nofollow">
+<title>App status</title>
+<style>
+  :root{
+    --bg:#fafafa; --text:#1a1a1a; --text-light:#666; --border:#e5e5e5;
+    --card:#fff; --ok:#1a7f4b; --warn:#a86b00; --bad:#c0392b;
+    --font:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);
+       line-height:1.5;padding:2rem 1rem 4rem}
+  .wrap{max-width:900px;margin:0 auto}
+  header{border-bottom:1px solid var(--border);padding-bottom:1rem;margin-bottom:1.5rem}
+  h1{font-size:1.5rem;font-weight:600;letter-spacing:-.5px}
+  .sub{color:var(--text-light);font-size:.875rem;margin-top:.25rem}
+  .banner{border:1px solid var(--border);border-left:3px solid var(--warn);
+          background:#fff;padding:.75rem 1rem;border-radius:6px;
+          font-size:.875rem;margin-bottom:1.25rem;color:var(--text-light)}
+  .banner.bad{border-left-color:var(--bad)}
+  .summary{font-size:.875rem;color:var(--text-light);margin-bottom:1.25rem}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:8px;
+        padding:1rem 1.25rem;margin-bottom:.75rem}
+  .card.stale{opacity:.55}
+  .top{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
+  .name{font-weight:600}
+  .label{font-size:.8rem;color:var(--text-light)}
+  .pill{margin-left:auto;font-size:.75rem;font-weight:600;letter-spacing:.04em;
+        text-transform:uppercase;padding:.15rem .5rem;border-radius:999px;
+        border:1px solid currentColor}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+  ul{list-style:none;margin-top:.6rem}
+  li{display:flex;gap:.6rem;align-items:baseline;font-size:.875rem;
+     padding:.2rem 0;flex-wrap:wrap}
+  .dot{width:.5rem;height:.5rem;border-radius:50%;background:currentColor;
+       flex:0 0 auto;transform:translateY(-1px)}
+  .cl{min-width:9rem}
+  .cd{color:var(--text-light)}
+  footer{margin-top:2rem;font-size:.8125rem;color:var(--text-light)}
+  a{color:inherit}
+  @media (max-width:520px){ .cl{min-width:0;font-weight:500} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>App status</h1>
+    <div class="sub" id="sub">Loading…</div>
+  </header>
+  <div id="banner"></div>
+  <div class="summary" id="summary"></div>
+  <div id="list"></div>
+  <footer>
+    Checks run on the Raspberry Pi and are served live — this page holds no
+    stored history. Refreshes every 60 seconds.
+  </footer>
+</div>
+
+<script>
+// The Pi is the source of truth. heartbeat.json is written by a GitHub Action
+// and consulted ONLY when the Pi can't be reached — which is exactly the case
+// the Pi could never report on itself.
+const STATUS_URL = "https://mikael-pi.tail43e9f8.ts.net/checkapps/status.json";
+const HEARTBEAT_URL = "heartbeat.json";
+const STALE_MINUTES = 20;
+
+const $ = id => document.getElementById(id);
+
+function ageMin(iso){
+  if(!iso) return null;
+  return (Date.now() - new Date(iso).getTime()) / 60000;
+}
+function ago(iso){
+  const m = ageMin(iso);
+  if(m === null || isNaN(m)) return "never";
+  if(m < 1) return "just now";
+  if(m < 60) return `${Math.round(m)} min ago`;
+  const h = m/60;
+  if(h < 24) return `${Math.round(h)} h ago`;
+  return `${Math.round(h/24)} d ago`;
+}
+// Amber, not red, when a check is failing but failing is its normal resting
+// state — the localhost dev servers are off unless Mikael is working on them.
+function level(c){ return c.ok ? "ok" : (c.expected_down ? "warn" : "bad"); }
+function rollup(checks){
+  if(checks.some(c => level(c) === "bad")) return "bad";
+  if(checks.some(c => level(c) === "warn")) return "warn";
+  return "ok";
+}
+const WORD = {ok:"up", warn:"idle", bad:"down"};
+
+function render(doc){
+  const projects = doc.projects || [];
+  const counts = {ok:0, warn:0, bad:0};
+  $("list").innerHTML = "";
+
+  for(const p of projects){
+    const checks = p.checks || [];
+    const state = rollup(checks);
+    counts[state]++;
+
+    const newest = checks.map(c => ageMin(c.checked_at))
+                         .filter(v => v !== null && !isNaN(v));
+    const stale = newest.length ? Math.min(...newest) > STALE_MINUTES : true;
+
+    const card = document.createElement("div");
+    card.className = "card" + (stale ? " stale" : "");
+    const items = checks.map(c => `
+      <li class="${level(c)}">
+        <span class="dot"></span>
+        <span class="cl">${esc(c.label)}</span>
+        <span class="cd">${esc(c.detail)}</span>
+      </li>`).join("");
+    card.innerHTML = `
+      <div class="top">
+        <span class="name">${esc(p.name)}</span>
+        <span class="label">${esc(p.label || "")}</span>
+        <span class="pill ${state}">${WORD[state]}</span>
+      </div>
+      <ul>${items}</ul>`;
+    $("list").appendChild(card);
+  }
+
+  $("summary").textContent =
+    `${counts.ok} up · ${counts.warn} idle · ${counts.bad} down`;
+  $("sub").textContent =
+    `Pi checks ${ago(doc.remote_checked_at)} · laptop checks ${ago(doc.local_pushed_at)}`;
+}
+
+function esc(s){
+  return String(s ?? "").replace(/[&<>"]/g, m =>
+    ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m]));
+}
+function banner(msg, bad){
+  $("banner").innerHTML = msg
+    ? `<div class="banner${bad ? " bad" : ""}">${esc(msg)}</div>` : "";
+}
+
+async function load(){
+  try{
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 12000);
+    const r = await fetch(STATUS_URL, {signal: ctl.signal, cache: "no-store"});
+    clearTimeout(t);
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    const doc = await r.json();
+    render(doc);
+    const m = ageMin(doc.remote_checked_at);
+    banner(m !== null && m > STALE_MINUTES
+      ? `The Pi is answering but its last check ran ${ago(doc.remote_checked_at)} — the refresh loop may have stalled.`
+      : "");
+  }catch(err){
+    await fallback();
+  }
+}
+
+async function fallback(){
+  $("list").innerHTML = "";
+  $("summary").textContent = "";
+  try{
+    const r = await fetch(HEARTBEAT_URL, {cache: "no-store"});
+    if(!r.ok) throw new Error("no heartbeat");
+    const h = await r.json();
+    $("sub").textContent = `Pi unreachable · heartbeat ${ago(h.checked_at)}`;
+    banner(h.ok
+      ? `Can't reach the Pi from this browser, though GitHub last reached it ${ago(h.checked_at)}. Likely this device's network rather than the Pi.`
+      : `The Pi is down. GitHub last failed to reach it ${ago(h.checked_at)}: ${h.detail || "no detail"}.`,
+      !h.ok);
+  }catch(e){
+    $("sub").textContent = "Pi unreachable";
+    banner("Can't reach the Pi, and no heartbeat file is published yet.", true);
+  }
+}
+
+load();
+setInterval(load, 60000);
+</script>
+</body>
+</html>
