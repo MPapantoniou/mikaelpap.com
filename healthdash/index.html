@@ -8,15 +8,18 @@
 <style>
   /* Tokens. Light values are the default; dark is *selected*, not an auto-flip.
      Both the OS preference and an explicit data-theme stamp must win. */
+  /* Light mode is deliberately warm and low-glare rather than paper-white:
+     a near-#fff page is fatiguing on a dashboard you glance at often. Surfaces
+     sit slightly ABOVE the page tone so cards still read as raised. */
   :root {
     color-scheme: light;
-    --surface-1:      #fcfcfb;
-    --page:           #f9f9f7;
-    --text-primary:   #0b0b0b;
-    --text-secondary: #52514e;
-    --text-muted:     #898781;
-    --hairline:       #e1e0d9;
-    --border-ring:    rgba(11,11,11,0.10);
+    --surface-1:      #faf8f4;
+    --page:           #f2efe8;
+    --text-primary:   #1a1916;
+    --text-secondary: #57544d;
+    --text-muted:     #8b877e;
+    --hairline:       #e2ddd2;
+    --border-ring:    rgba(26,25,22,0.12);
     /* Chart hue: categorical slot 1. Validated against both surfaces —
        lightness band, chroma floor and >=3:1 contrast all pass. */
     --accent:         #2a78d6;
@@ -81,6 +84,18 @@
   button:hover { border-color: var(--text-muted); }
   .primary { background: var(--accent); border-color: transparent; color: #fff; font-weight: 500; padding: 11px 20px; }
   .primary:hover { filter: brightness(1.08); border-color: transparent; }
+
+  .head-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .theme-switch { display: inline-flex; gap: 2px; padding: 2px;
+                  background: var(--surface-1); border: 1px solid var(--border-ring);
+                  border-radius: 8px; }
+  .theme-switch button {
+    border: none; background: none; padding: 5px 10px; border-radius: 6px;
+    font-size: 0.8125rem; color: var(--text-secondary);
+  }
+  .theme-switch button[aria-pressed="true"] {
+    background: var(--page); color: var(--text-primary); font-weight: 600;
+  }
 
   /* Login */
   .gate { max-width: 420px; margin: 12vh auto; text-align: center; }
@@ -207,7 +222,14 @@
   <section id="dash" class="hidden">
     <header>
       <h1>HealthDash</h1>
-      <button id="signout">Sign out</button>
+      <div class="head-actions">
+        <div class="theme-switch" id="theme-switch" role="group" aria-label="Theme">
+          <button data-theme="auto"  aria-pressed="true">Auto</button>
+          <button data-theme="light" aria-pressed="false">Light</button>
+          <button data-theme="dark"  aria-pressed="false">Dark</button>
+        </div>
+        <button id="signout">Sign out</button>
+      </div>
     </header>
     <p class="sub" id="subtitle">Loading…</p>
 
@@ -295,7 +317,45 @@ const ERRORS = {
   not_allowed: "That Google account is not authorised for this dashboard.",
 };
 
+// Theme. "auto" removes the stamp so the OS preference (and therefore the
+// prefers-color-scheme block) applies; light/dark stamp data-theme, which wins
+// over the media query in both directions.
+const THEME_KEY = "healthdash_theme";
+
+// Setting the attribute is separate from redrawing, because this runs before
+// chartState exists. `typeof` does NOT guard a `let` in its temporal dead zone —
+// reading it early throws rather than returning "undefined".
+function setThemeAttr(choice) {
+  if (choice === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", choice);
+  document.querySelectorAll("#theme-switch button").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.theme === choice)));
+}
+
+function applyTheme(choice) {
+  setThemeAttr(choice);
+  // Charts read their colours from CSS variables at draw time, so a theme change
+  // needs a redraw — otherwise the line keeps the old mode's hue.
+  if (chartState.metric) drawChart();
+  document.querySelectorAll(".tile .spark").forEach(svg => {
+    const metric = svg.closest(".tile")?.dataset.metric;
+    const trend = (lastData?.trends || {})[metric];
+    if (trend) drawSparkline(svg, trend);
+  });
+}
+
+let lastData = null;       // kept so a theme change can redraw sparklines
 let pendingWhoop = null;   // set from the #whoop= fragment on return from consent
+
+// Apply the saved theme before first paint to avoid a flash of the wrong mode.
+setThemeAttr(localStorage.getItem(THEME_KEY) || "auto");
+
+document.getElementById("theme-switch").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-theme]");
+  if (!btn) return;
+  localStorage.setItem(THEME_KEY, btn.dataset.theme);
+  applyTheme(btn.dataset.theme);
+});
 
 function getToken() { return localStorage.getItem(TOKEN_KEY); }
 function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
@@ -337,6 +397,7 @@ function relativeTime(iso) {
 }
 
 function render(data) {
+  lastData = data;
   const latestBy = {};
   (data.latest || []).forEach((l) => { latestBy[l.metric] = l; });
 
