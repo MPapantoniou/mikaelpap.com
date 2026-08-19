@@ -1,5 +1,5 @@
 {
-  "ok": false,
-  "detail": "HTTP 000000",
-  "checked_at": "2026-08-18T23:44:32Z"
+  "ok": true,
+  "detail": "HTTP 200",
+  "checked_at": "2026-08-19T00:52:41Z"
 }
