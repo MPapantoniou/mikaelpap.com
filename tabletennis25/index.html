@@ -47,6 +47,10 @@ input.score{text-align:center; font-size:26px; font-weight:700; padding:10px}
 .verdict{text-align:center; padding:18px 12px 6px}
 .verdict .big{font-size:27px; font-weight:700; letter-spacing:-.02em; line-height:1.25}
 .verdict .small{color:var(--muted); font-size:13px; margin-top:6px}
+.big-verdict{padding:30px 8px 14px}
+.big-verdict .big{font-size:38px; line-height:1.15}
+.big-verdict .big .n{display:block; font-size:62px; letter-spacing:-.04em; margin-top:2px}
+.big-verdict .small{font-size:14px; margin-top:12px}
 button.act{width:100%; padding:14px; font-size:16px; font-weight:600; font-family:inherit;
   cursor:pointer; background:var(--accent); color:var(--accent-ink); border:none; border-radius:10px}
 button.ghost{background:var(--card); color:var(--ink); border:1px solid var(--line)}
@@ -81,7 +85,8 @@ td.num,th.num{text-align:right; font-variant-numeric:tabular-nums}
 </header>
 
 <nav>
-  <button id="tab-match"   aria-selected="true"  onclick="show('match')">Match</button>
+  <button id="tab-start"   aria-selected="true"  onclick="show('start')">Start</button>
+  <button id="tab-match"   aria-selected="false" onclick="show('match')">Result</button>
   <button id="tab-ladder"  aria-selected="false" onclick="show('ladder')">Ladder</button>
   <button id="tab-players" aria-selected="false" onclick="show('players')">Players</button>
 </nav>
@@ -91,8 +96,27 @@ td.num,th.num{text-align:right; font-variant-numeric:tabular-nums}
   on the <strong>Players</strong> tab.
 </div>
 
-<!-- ============ MATCH ============ -->
-<section id="view-match">
+<!-- ============ START (main page) ============ -->
+<section id="view-start">
+  <div class="card">
+    <div class="row">
+      <div><label for="me">You</label><select id="me" onchange="pickMe()"></select></div>
+      <div class="vs">v</div>
+      <div><label for="opp">Opponent</label><select id="opp" onchange="render()"></select></div>
+    </div>
+
+    <div class="verdict big-verdict">
+      <div class="big" id="hv">&mdash;</div>
+      <div class="small" id="hv-sub"></div>
+    </div>
+
+    <p class="hint">First to 11. Put the start on the scoreboard before the first serve.
+    Your name is remembered on this phone, so next time you only pick the opponent.</p>
+  </div>
+</section>
+
+<!-- ============ RESULT ============ -->
+<section id="view-match" class="hidden">
   <div class="card">
     <div class="row">
       <div><label for="pa">Player 1</label><select id="pa" onchange="render()"></select></div>
@@ -275,10 +299,19 @@ function resetAll(){
 }
 
 function show(v){
-  ['match','ladder','players'].forEach(function(n){
+  ['start','match','ladder','players'].forEach(function(n){
     document.getElementById('view-'+n).classList.toggle('hidden', n!==v);
     document.getElementById('tab-'+n).setAttribute('aria-selected', String(n===v));
   });
+}
+
+// Which player is using this phone. Kept under its own key, not in `state`, so
+// restoring a backup from someone else's device doesn't change who you are.
+var MEKEY = 'tt25_me';
+function getMe(){ try{ return localStorage.getItem(MEKEY); }catch(e){ return null; } }
+function pickMe(){
+  try{ localStorage.setItem(MEKEY, document.getElementById('me').value); }catch(e){}
+  render();
 }
 function esc(s){ return String(s).replace(/[&<>"]/g, function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
@@ -303,6 +336,31 @@ function render(){
   var rs = state.players.map(function(p){return p.r;});
   var spread = rs.length ? Math.max.apply(null,rs) - Math.min.apply(null,rs) : 0;
   document.getElementById('unset').classList.toggle('hidden', !(state.players.length>1 && spread<0.05));
+
+  // ---- main page: you v opponent ----
+  var me = document.getElementById('me'), opp = document.getElementById('opp');
+  var savedMe = getMe(), keepOpp = opp.value;
+  fillSelect(me, (savedMe != null && byId(+savedMe)) ? savedMe : me.value);
+  fillSelect(opp, keepOpp);
+  if(state.players.length > 1 && me.value === opp.value) opp.selectedIndex = (me.selectedIndex === 0) ? 1 : 0;
+
+  var mp = byId(+me.value), op = byId(+opp.value);
+  var hv = document.getElementById('hv'), hs = document.getElementById('hv-sub');
+  if(mp && op && mp !== op){
+    var h = calc(mp, op);
+    if(h.start === 0){
+      hv.innerHTML = 'Level game';
+      hs.textContent = 'No start. Straight race to 11.';
+    } else if(h.weak === mp){
+      hv.innerHTML = 'You start <span class="n">' + h.start + '–0</span>';
+      hs.textContent = 'You need ' + (11-h.start) + ' points, ' + op.name + ' needs 11.'
+        + (h.uncovered > 0.5 ? ' Capped — the real gap is wider than 11 points can bridge.' : '');
+    } else {
+      hv.innerHTML = esc(op.name) + ' starts <span class="n">' + h.start + '–0</span>';
+      hs.textContent = op.name + ' needs ' + (11-h.start) + ' points, you need 11.'
+        + (h.uncovered > 0.5 ? ' Capped — the real gap is wider than 11 points can bridge.' : '');
+    }
+  } else { hv.textContent = '—'; hs.textContent = 'Pick yourself and an opponent.'; }
 
   var a = byId(+pa.value), b = byId(+pb.value);
   var vd = document.getElementById('verdict'), vs = document.getElementById('verdict-sub');
