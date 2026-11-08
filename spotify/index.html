@@ -174,6 +174,70 @@ select:focus{outline:2px solid var(--songs);outline-offset:1px}
 .note{font-size:.7rem;color:var(--ink-3);margin-top:14px}
 .err{background:#2a1618;border:1px solid #5b2a2e;color:#fca5a5;padding:11px 13px;border-radius:10px;font-size:.82rem;margin-bottom:16px}
 
+/* ============================== PLAYLISTS ================================ */
+.pl-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
+         flex-wrap:wrap;margin:26px 0 14px}
+.pl-head h2{font-size:.95rem;font-weight:600;letter-spacing:-.01em}
+.pl-tools{display:flex;gap:10px;flex-wrap:wrap}
+input[type=search]{
+  background:var(--card-2);color:var(--ink);border:1px solid var(--line);
+  border-radius:9px;padding:7px 11px;font-size:.8rem;font-family:inherit;min-width:0;width:200px;
+}
+input[type=search]:focus{outline:2px solid var(--songs);outline-offset:1px}
+.pl-grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:18px}
+.pl-grid > *{min-width:0}
+.pl{display:flex;gap:12px;padding:8px 6px;border-bottom:1px solid var(--line);align-items:center;
+    cursor:pointer;border-radius:8px;width:100%;background:none;border-left:0;border-right:0;border-top:0;
+    color:inherit;font:inherit;text-align:left}
+.pl:hover,.pl:focus-visible{background:var(--card-2)}
+.pl:last-child{border-bottom:none}
+.pl-art{width:44px;height:44px;border-radius:6px;flex:none;object-fit:cover;background:var(--card-2)}
+.pl-count{font-size:.85rem;font-weight:600;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+.pl-count small{display:block;font-size:.66rem;font-weight:400;color:var(--ink-3)}
+/* Clickable heading on the recent card. */
+.linkish{background:none;border:none;color:var(--ink-2);font:inherit;font-size:.7rem;cursor:pointer;
+         margin-left:auto;text-transform:none;letter-spacing:0;padding:2px 4px;border-radius:5px}
+.linkish:hover,.linkish:focus-visible{color:var(--ink);background:var(--card-2)}
+
+/* ========================= OVERLAY (history / playlist) ================== */
+#overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.65);display:none;
+         align-items:flex-start;justify-content:center;padding:4vh 16px}
+#overlay.open{display:flex}
+.sheet{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+       width:min(760px,100%);max-height:92vh;display:flex;flex-direction:column;min-width:0}
+.sheet-head{display:flex;gap:14px;align-items:center;padding:18px 18px 12px;border-bottom:1px solid var(--line)}
+.sheet-head img{width:64px;height:64px;border-radius:8px;object-fit:cover;flex:none;background:var(--card-2)}
+.sheet-title{font-size:1.15rem;font-weight:600;letter-spacing:-.01em;overflow-wrap:anywhere}
+.sheet-sub{font-size:.76rem;color:var(--ink-3);margin-top:3px}
+.sheet-tools{display:flex;gap:10px;padding:12px 18px;flex-wrap:wrap;align-items:center}
+.sheet-tools a{font-size:.78rem;color:var(--ink-2);margin-left:auto}
+.close{margin-left:auto;align-self:flex-start;background:var(--card-2);border:none;color:var(--ink);
+       width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;flex:none}
+.sheet-body{overflow-y:auto;padding:0 18px 18px;scrollbar-width:thin}
+.yr{font-size:.68rem;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-3);
+    padding:14px 0 4px;position:sticky;top:0;background:var(--card)}
+
+/* Any song row can be clicked for its play history. */
+.song{cursor:pointer;border-radius:8px}
+.song:hover,.song:focus-visible{background:var(--card-2)}
+.play.song{padding-left:6px;padding-right:6px;margin:0 -6px}
+/* The song sheet stacks ABOVE the main sheet, so closing it returns you to exactly
+   where you were in the history or playlist - scroll position and search intact. */
+#song-overlay{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.55);display:none;
+              align-items:flex-start;justify-content:center;padding:7vh 16px}
+#song-overlay.open{display:flex}
+#song-overlay .sheet{width:min(560px,100%)}
+.when{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);
+      font-size:.84rem}
+.when:last-child{border-bottom:none}
+.when span:last-child{color:var(--ink-3);font-variant-numeric:tabular-nums;flex:none}
+.when .run{display:block;font-size:.72rem;color:var(--ink-3);margin-top:2px}
+
+@media (max-width:980px){
+  .pl-grid{grid-template-columns:1fr}
+  input[type=search]{width:100%}
+  .pl-tools{width:100%}
+}
 @media (max-width:980px){
   .grid{grid-template-columns:1fr;grid-template-rows:auto auto auto}
   .now{grid-column:1;grid-row:1}
@@ -219,6 +283,7 @@ select:focus{outline:2px solid var(--songs);outline-offset:1px}
       <option value="week" selected>This week</option>
       <option value="month">This month</option>
       <option value="year">This year</option>
+      <option value="all">All time</option>
     </select>
   </div>
 
@@ -242,13 +307,14 @@ select:focus{outline:2px solid var(--songs);outline-offset:1px}
         <div class="kpi"><div class="k-label">Plays today</div><div class="k-value" id="k-today">–</div></div>
         <div class="kpi"><div class="k-label">Logged all time</div><div class="k-value" id="k-total">–</div></div>
         <div class="kpi"><div class="k-label">Top genre this week</div><div class="k-value" id="k-genre" style="font-size:1.05rem">–</div></div>
-        <div class="kpi"><div class="k-label">Logging since</div><div class="k-value" id="k-since" style="font-size:1.05rem">–</div></div>
+        <div class="kpi"><div class="k-label">History since</div><div class="k-value" id="k-since" style="font-size:1.05rem">–</div></div>
       </div>
     </section>
 
     <!-- RECENT -->
     <section class="card recent">
-      <h2><span class="swatch" style="background:var(--songs)"></span>Last 100 plays</h2>
+      <h2><span class="swatch" style="background:var(--songs)"></span>Last 100 plays
+        <button class="linkish" id="open-history">Full history →</button></h2>
       <div class="scroll" id="recent-list"><div class="empty">Loading…</div></div>
     </section>
 
@@ -269,6 +335,65 @@ select:focus{outline:2px solid var(--songs);outline-offset:1px}
           each play — Spotify stopped returning genre data to apps in 2024.</div>
       </section>
     </div>
+  </div>
+
+  <!-- PLAYLISTS -->
+  <div class="pl-head">
+    <h2>Playlists</h2>
+    <div class="pl-tools">
+      <input type="search" id="pl-search" placeholder="Search playlists" aria-label="Search playlists">
+      <select id="pl-sort" aria-label="Sort playlists">
+        <option value="plays">Most played</option>
+        <option value="library">Library order</option>
+        <option value="name">A–Z</option>
+      </select>
+    </div>
+  </div>
+  <div class="pl-grid">
+    <section class="card">
+      <h2><span class="swatch" style="background:var(--songs)"></span>My playlists <span id="pl-mine-n"></span></h2>
+      <div class="scroll" id="pl-mine"><div class="empty">Loading…</div></div>
+      <div class="note">Plays = every play of every song in the playlist, wherever you played it.
+        A song in two playlists counts in both.</div>
+    </section>
+    <section class="card">
+      <h2><span class="swatch" style="background:var(--artists)"></span>Playlists I follow <span id="pl-fol-n"></span></h2>
+      <div class="scroll" id="pl-fol"><div class="empty">Loading…</div></div>
+      <div class="note">Spotify won't share the songs in playlists you don't own, so these count
+        plays started <em>from</em> the playlist — logged since 7 Nov 2026.</div>
+    </section>
+  </div>
+</div>
+
+<!-- Shared full-screen sheet: full history, or one playlist's songs. -->
+<div id="overlay" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+  <div class="sheet">
+    <div class="sheet-head">
+      <img id="sheet-img" alt="" style="display:none">
+      <div style="min-width:0">
+        <div class="sheet-title" id="sheet-title"></div>
+        <div class="sheet-sub" id="sheet-sub"></div>
+      </div>
+      <button class="close" id="sheet-close" aria-label="Close">✕</button>
+    </div>
+    <div class="sheet-tools" id="sheet-tools"></div>
+    <div class="sheet-body" id="sheet-body"></div>
+  </div>
+</div>
+
+<!-- One song's play history; stacks above the main sheet. -->
+<div id="song-overlay" role="dialog" aria-modal="true" aria-labelledby="song-title">
+  <div class="sheet">
+    <div class="sheet-head">
+      <img id="song-img" alt="">
+      <div style="min-width:0">
+        <div class="sheet-title" id="song-title"></div>
+        <div class="sheet-sub" id="song-sub"></div>
+      </div>
+      <button class="close" id="song-close" aria-label="Close">✕</button>
+    </div>
+    <div class="sheet-tools" id="song-tools"></div>
+    <div class="sheet-body" id="song-body"></div>
   </div>
 </div>
 
@@ -429,15 +554,7 @@ async function loadRecent(){
       el.innerHTML = `<div class="empty">No plays logged yet. The poller runs every
         5 minutes — play something and it'll appear.</div>`;
     }else{
-      el.innerHTML = d.plays.map(p => `
-        <div class="play">
-          <img class="play-art" loading="lazy" alt="" src="${esc(p.art || BLANK)}">
-          <div class="play-body">
-            <div class="play-track" title="${esc(p.track)}">${esc(p.track)}</div>
-            <div class="play-artist" title="${esc(p.artist)}">${esc(p.artist)}</div>
-          </div>
-          <div class="play-when">${esc(p.date)}<br>${esc(p.time)}</div>
-        </div>`).join("");
+      el.innerHTML = d.plays.map(p => playRow(p, `${esc(p.date)}<br>${esc(p.time)}`)).join("");
     }
     $("k-total").textContent = (d.total_plays ?? 0).toLocaleString();
     $("k-since").textContent = d.history_since || "–";
@@ -454,12 +571,12 @@ async function loadRecent(){
 /* --------------------------------- tops --------------------------------- */
 const COLOURS = {tracks:"var(--songs)", artists:"var(--artists)", genres:"var(--genres)"};
 
-function renderRank(elId, rows, colour, emptyMsg){
+function renderRank(elId, rows, colour, emptyMsg, clickable = false){
   const el = $(elId);
   if(!rows || !rows.length){ el.innerHTML = `<div class="empty">${esc(emptyMsg)}</div>`; return; }
   const max = Math.max(...rows.map(r => r.count)) || 1;
   el.innerHTML = rows.map((r,i) => `
-    <div>
+    <div ${clickable ? `class="song" ${songAttrs(r)}` : ""}>
       <div class="row">
         <span class="row-n">${i+1}</span>
         <span>
@@ -477,13 +594,11 @@ async function loadTop(){
   try{
     const d = await api("/api/top?window=" + encodeURIComponent(w));
     const none = "Nothing logged in this window yet.";
-    renderRank("top-tracks",  d.tracks,  COLOURS.tracks,  none);
+    renderRank("top-tracks",  d.tracks,  COLOURS.tracks,  none, true);
     renderRank("top-artists", d.artists, COLOURS.artists, none);
     renderRank("top-genres",  d.genres,  COLOURS.genres,
       "No genres yet — they fill in as the poller catalogues each artist.");
-    $("k-today").textContent = (d.window === "today")
-      ? d.tracks.reduce((n,t) => n + t.count, 0).toLocaleString()
-      : $("k-today").textContent;
+    if(d.window === "today") $("k-today").textContent = d.window_plays.toLocaleString();
   }catch(err){
     if(String(err.message).includes("session")) return;
     showErr("Couldn't load top charts — " + err.message);
@@ -494,7 +609,7 @@ async function loadTop(){
 async function loadToday(){
   try{
     const d = await api("/api/top?window=today");
-    $("k-today").textContent = d.tracks.reduce((n,t) => n + t.count, 0).toLocaleString();
+    $("k-today").textContent = d.window_plays.toLocaleString();
     const g = await api("/api/top?window=week");
     $("k-genre").textContent = g.genres.length ? g.genres[0].name : "–";
   }catch(err){ /* non-critical figures - leave the placeholder */ }
@@ -502,9 +617,303 @@ async function loadToday(){
 
 $("window").addEventListener("change", loadTop);
 
+/* -------------------------------- sheet --------------------------------- */
+/* Which view owns the sheet. Async work (a history page, a debounced search, a
+   playlist fetch) checks this before writing, because the sheet may have been closed
+   or reused for something else while it was waiting. Pressing Escape inside the
+   search box is the classic case: it clears the box first, firing a late "search
+   for nothing" that would otherwise paint history into the next playlist opened. */
+let sheetSeq = 0;
+
+function openSheet({title, sub = "", img = null, tools = ""}){
+  sheetSeq++;
+  $("sheet-title").textContent = title;
+  $("sheet-sub").textContent = sub;
+  $("sheet-img").style.display = img ? "block" : "none";
+  if(img) $("sheet-img").src = img;
+  $("sheet-tools").innerHTML = tools;
+  $("sheet-tools").style.display = tools ? "flex" : "none";
+  $("sheet-body").innerHTML = `<div class="empty">Loading…</div>`;
+  $("sheet-body").scrollTop = 0;
+  $("overlay").classList.add("open");
+  document.body.style.overflow = "hidden";
+  $("sheet-close").focus();
+}
+function closeSheet(){
+  sheetSeq++;
+  $("overlay").classList.remove("open");
+  document.body.style.overflow = "";
+  hist.observer?.disconnect();
+}
+$("sheet-close").addEventListener("click", closeSheet);
+$("overlay").addEventListener("click", e => { if(e.target.id === "overlay") closeSheet(); });
+document.addEventListener("keydown", e => {
+  if(e.key !== "Escape") return;
+  // Close only the TOP layer: the song sheet sits above the history/playlist sheet.
+  if($("song-overlay").classList.contains("open")) closeSong();
+  else if($("overlay").classList.contains("open")) closeSheet();
+});
+
+/* ----------------------------- song history ----------------------------- */
+let songSeq = 0;
+
+function closeSong(){
+  songSeq++;
+  $("song-overlay").classList.remove("open");
+  // Only release page scroll if the main sheet isn't still open underneath.
+  if(!$("overlay").classList.contains("open")) document.body.style.overflow = "";
+}
+
+async function openSong(el){
+  const mine = ++songSeq;
+  const {id, name, artist} = el.dataset;
+  $("song-title").textContent = name;
+  $("song-sub").textContent = artist;
+  $("song-img").src = el.querySelector("img")?.src || BLANK;
+  $("song-tools").style.display = "none";
+  $("song-body").innerHTML = `<div class="empty">Loading…</div>`;
+  $("song-body").scrollTop = 0;
+  $("song-overlay").classList.add("open");
+  document.body.style.overflow = "hidden";
+  $("song-close").focus();
+  try{
+    const q = new URLSearchParams({name, artist});
+    if(id) q.set("id", id);
+    const d = await api("/api/song?" + q);
+    if(mine !== songSeq) return;   // closed, or another song clicked meanwhile
+    if(d.art) $("song-img").src = d.art;
+    // count = capped (what the charts use); raw = every play Spotify logged.
+    const counted = d.raw > d.count ? `${plays(d.count)} (${d.raw.toLocaleString()} incl. repeats)` : plays(d.count);
+    $("song-sub").textContent = d.count ? `${d.artist} · ${counted} · first ${d.first}` : d.artist;
+    if(d.url){
+      $("song-tools").innerHTML = `<a href="${esc(d.url)}" target="_blank" rel="noopener">Open in Spotify ↗</a>`;
+      $("song-tools").style.display = "flex";
+    }
+    let year = null, html = "";
+    for(const p of d.plays){
+      if(p.year !== year){ year = p.year; html += `<div class="yr">${year}</div>`; }
+      // A back-to-back run is one line: time span plus how many in a row.
+      const run = p.n > 1
+        ? `<small class="run">×${p.n} in a row${p.n > p.counted ? ` · counted as ${p.counted}` : ""}</small>` : "";
+      html += `<div class="when"><span>${esc(p.day)}${run}</span>
+        <span>${esc(p.time)}${p.end ? "–" + esc(p.end) : ""}</span></div>`;
+    }
+    const note = d.raw > d.count
+      ? `<div class="note" style="margin:0 0 4px">Back-to-back plays count up to ${d.cap} times —
+         longer runs are usually repeat left on, not deliberate listens.</div>` : "";
+    $("song-body").innerHTML = html ? note + html : `<div class="empty">No plays logged for this song yet.</div>`;
+  }catch(err){
+    if(mine === songSeq)
+      $("song-body").innerHTML = `<div class="empty">Couldn't load — ${esc(err.message)}</div>`;
+  }
+}
+
+$("song-close").addEventListener("click", closeSong);
+$("song-overlay").addEventListener("click", e => { if(e.target.id === "song-overlay") closeSong(); });
+// One delegated handler for every song row on the page, in any list or sheet.
+document.addEventListener("click", e => {
+  const s = e.target.closest("[data-song]");
+  if(s) openSong(s);
+});
+document.addEventListener("keydown", e => {
+  if(e.key === "Enter" && e.target.matches?.("[data-song]")) openSong(e.target);
+});
+
+/* data-* carries what /api/song needs, so one delegated handler serves every list. */
+const songAttrs = s => `tabindex="0" role="button" data-song="1" data-id="${esc(s.id || "")}"
+  data-name="${esc(s.track ?? s.name)}" data-artist="${esc(s.artist ?? s.detail ?? "")}"`;
+
+const playRow = (p, right) => `
+  <div class="play song" ${songAttrs(p)}>
+    <img class="play-art" loading="lazy" alt="" src="${esc(p.art || BLANK)}">
+    <div class="play-body">
+      <div class="play-track" title="${esc(p.track)}">${esc(p.track)}</div>
+      <div class="play-artist" title="${esc(p.artist)}">${esc(p.artist)}</div>
+    </div>
+    <div class="play-when">${right}</div>
+  </div>`;
+
+/* ----------------------------- full history ----------------------------- */
+/* Pages backwards with `before` = the oldest played_at shown so far; a sentinel at
+   the bottom of the list loads the next page as it scrolls into view. */
+const hist = {before:null, q:"", year:null, loading:false, done:false, observer:null, seq:0};
+
+function openHistory(){
+  openSheet({
+    title: "Full history",
+    tools: `<input type="search" id="hist-q" placeholder="Search song or artist"
+                   aria-label="Search history" style="width:100%">`,
+  });
+  const mine = sheetSeq;
+  let t;
+  $("hist-q").addEventListener("input", e => {
+    clearTimeout(t);
+    t = setTimeout(() => { if(mine === sheetSeq) resetHistory(e.target.value.trim()); }, 300);
+  });
+  resetHistory("");
+}
+
+function resetHistory(q){
+  // hist.seq is per-search; sheetSeq is per-sheet. A page must match both to paint.
+  Object.assign(hist, {before:null, q, year:null, loading:false, done:false,
+                       seq:hist.seq + 1, sheet:sheetSeq});
+  $("sheet-body").innerHTML = `<div id="hist-list"></div><div id="hist-more" class="empty">Loading…</div>`;
+  hist.observer?.disconnect();
+  hist.observer = new IntersectionObserver(es => { if(es[0].isIntersecting) moreHistory(); },
+                                           {root: $("sheet-body"), rootMargin: "400px"});
+  hist.observer.observe($("hist-more"));
+}
+
+async function moreHistory(){
+  if(hist.loading || hist.done) return;
+  hist.loading = true;
+  const seq = hist.seq;   // a newer search may start while this page is in flight
+  try{
+    let url = "/api/history?limit=100";
+    if(hist.before) url += "&before=" + encodeURIComponent(hist.before);
+    if(hist.q) url += "&q=" + encodeURIComponent(hist.q);
+    const d = await api(url);
+    if(seq !== hist.seq || hist.sheet !== sheetSeq) return;
+    $("sheet-sub").textContent = hist.q
+      ? `${d.total.toLocaleString()} plays match “${hist.q}”`
+      : `${d.total.toLocaleString()} plays since ${d.history_since}`;
+    let html = "";
+    for(const p of d.plays){
+      if(p.year !== hist.year){ hist.year = p.year; html += `<div class="yr">${p.year}</div>`; }
+      html += playRow(p, `${esc(p.date)}<br>${esc(p.time)}`);
+    }
+    $("hist-list").insertAdjacentHTML("beforeend", html);
+    if(d.plays.length) hist.before = d.plays[d.plays.length - 1].played_at;
+    hist.done = !d.more;
+    $("hist-more").textContent = hist.done
+      ? (d.plays.length || hist.before ? "That's everything." : "No plays match.") : "Loading…";
+  }catch(err){
+    if(seq === hist.seq) $("hist-more").textContent = "Couldn't load — " + err.message;
+  }finally{
+    if(seq === hist.seq) hist.loading = false;
+  }
+  /* If the first page didn't fill the sheet, the sentinel never leaves view and
+     IntersectionObserver won't fire again - so check by hand. */
+  const b = $("sheet-body");
+  if(seq === hist.seq && hist.sheet === sheetSeq && !hist.done &&
+     b.scrollHeight <= b.clientHeight + 400) moreHistory();
+}
+
+$("open-history").addEventListener("click", openHistory);
+
+/* ------------------------------- playlists ------------------------------ */
+let playlists = {mine:[], followed:[], status:"pending"};
+
+const plays = n => n === 1 ? "1 play" : `${(n||0).toLocaleString()} plays`;
+
+function plRow(p, kind){
+  const count = (kind === "mine" && !p.synced)
+    ? `<span class="pl-count" style="color:var(--ink-3);font-weight:400">syncing…</span>`
+    : `<span class="pl-count">${(p.plays||0).toLocaleString()}<small>plays</small></span>`;
+  const sub = kind === "mine" ? `${p.tracks ?? "?"} songs` : `by ${p.owner || "?"} · ${p.tracks ?? "?"} songs`;
+  return `<button class="pl" data-id="${esc(p.id)}" data-kind="${kind}">
+    <img class="pl-art" loading="lazy" alt="" src="${esc(p.image || BLANK)}">
+    <span class="play-body">
+      <span class="play-track" style="display:block" title="${esc(p.name)}">${esc(p.name)}</span>
+      <span class="play-artist" style="display:block">${esc(sub)}</span>
+    </span>${count}</button>`;
+}
+
+function renderPlaylists(){
+  const q = $("pl-search").value.trim().toLowerCase();
+  const sort = $("pl-sort").value;
+  const prep = list => {
+    let out = list.map((p, i) => ({...p, _i:i}))
+                  .filter(p => !q || (p.name||"").toLowerCase().includes(q));
+    if(sort === "plays") out.sort((a,b) => (b.plays||0) - (a.plays||0) || a._i - b._i);
+    if(sort === "name")  out.sort((a,b) => (a.name||"").localeCompare(b.name||""));
+    return out;
+  };
+  for(const [kind, el, n] of [["mine","pl-mine","pl-mine-n"], ["followed","pl-fol","pl-fol-n"]]){
+    const all = playlists[kind], rows = prep(all);
+    $(n).textContent = all.length ? `· ${all.length}` : "";
+    $(el).innerHTML = rows.length ? rows.map(p => plRow(p, kind)).join("")
+      : `<div class="empty">${q ? "No playlists match." : "None."}</div>`;
+  }
+}
+
+async function loadPlaylists(){
+  try{
+    playlists = await api("/api/playlists");
+    if(playlists.status === "needs-reauth" ||
+       (playlists.status === "pending" && !playlists.mine.length && !playlists.followed.length)){
+      const msg = playlists.status === "needs-reauth"
+        ? "This Spotify connection was set up before playlists were added. Re-connect Spotify to see them."
+        : "Playlists are still being fetched — check back in a few minutes.";
+      $("pl-mine").innerHTML = $("pl-fol").innerHTML = `<div class="empty">${msg}</div>`;
+      return;
+    }
+    renderPlaylists();
+  }catch(err){
+    if(String(err.message).includes("session")) return;
+    $("pl-mine").innerHTML = `<div class="empty">Couldn't load playlists — ${esc(err.message)}</div>`;
+  }
+}
+
+$("pl-search").addEventListener("input", renderPlaylists);
+$("pl-sort").addEventListener("change", renderPlaylists);
+
+document.querySelector(".pl-grid").addEventListener("click", e => {
+  const b = e.target.closest(".pl");
+  if(!b) return;
+  const kind = b.dataset.kind === "mine" ? "mine" : "followed";
+  const p = playlists[kind].find(x => x.id === b.dataset.id);
+  if(p) openPlaylist(p, kind);
+});
+
+let plSongs = [], plKind = "mine";
+async function openPlaylist(p, kind){
+  plKind = kind;
+  openSheet({
+    title: p.name, img: p.image || BLANK,
+    sub: kind === "mine"
+      ? `${p.tracks ?? "?"} songs · ${plays(p.plays)}`
+      : `by ${p.owner || "?"} · ${p.tracks ?? "?"} songs · ${plays(p.plays)} from this playlist`,
+    // Followed playlists have no playlist order to show (only songs played from them,
+    // already most-played first), so the sort control is left out.
+    tools: `${kind === "mine" ? `<select id="pls-sort" aria-label="Sort songs">
+              <option value="order">Playlist order</option>
+              <option value="plays">Most played</option>
+            </select>` : ""}
+            ${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">Open in Spotify ↗</a>` : ""}`,
+  });
+  $("pls-sort")?.addEventListener("change", renderSongs);
+  const mine = sheetSeq;
+  try{
+    const d = await api("/api/playlists/" + encodeURIComponent(p.id));
+    if(mine !== sheetSeq) return;   // closed, or another playlist opened meanwhile
+    plSongs = d.songs.map((s, i) => ({...s, _i:i}));
+    renderSongs();
+  }catch(err){
+    $("sheet-body").innerHTML = `<div class="empty">Couldn't load songs — ${esc(err.message)}</div>`;
+  }
+}
+
+function renderSongs(){
+  const rows = [...plSongs];
+  if($("pls-sort")?.value === "plays") rows.sort((a,b) => b.plays - a.plays || a._i - b._i);
+  // Followed playlists: Spotify won't list their songs, so this is only what's been
+  // played from them. Say so, or an empty/short list looks like a bug.
+  const note = plKind === "mine" ? "" : `<div class="note" style="margin:0 0 6px">
+    Spotify doesn't share the songs in playlists you don't own, so this shows the songs
+    you've played <em>from</em> this playlist (logged since 7 Nov 2026). For the full
+    list, open it in Spotify.</div>`;
+  $("sheet-body").innerHTML = note + (rows.length ? rows.map(s => playRow(s,
+      `<b style="color:var(--ink);font-size:.8rem">${plays(s.plays)}</b><br>` +
+      (s.last ? `last ${new Date(s.last).toLocaleDateString([], {day:"numeric", month:"short", year:"numeric"})}` : "never played"))
+    ).join("")
+    : `<div class="empty">${plKind === "mine" ? "No songs synced for this playlist yet."
+                                              : "Nothing played from this playlist yet."}</div>`);
+}
+
 /* --------------------------------- boot --------------------------------- */
 function start(){
-  loadNow(); loadRecent(); loadTop(); loadToday();
+  loadNow(); loadRecent(); loadTop(); loadToday(); loadPlaylists();
   clearInterval(npTimer); clearInterval(tickTimer);
   npTimer = setInterval(loadNow, 10000);   // server caches 5s, so this is cheap
   tickTimer = setInterval(tick, 1000);
